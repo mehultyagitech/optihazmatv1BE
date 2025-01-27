@@ -3,12 +3,19 @@ import RateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import logger from 'morgan';
 import helmet from 'helmet';
+import cors from 'cors';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
 
 dotenv.config();
 
 const app = express();
+
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: 'GET,POST,PUT,DELETE',
+  credentials: true,
+}));
 
 app.use(logger('dev'));
 app.use(helmet());
