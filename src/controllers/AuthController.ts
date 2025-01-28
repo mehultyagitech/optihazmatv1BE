@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User, Role } from '@prisma/client';
+import { User, Role, LoginLog } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import ApiException from '../errors/ApiException';
 import prisma from '../database/Prisma';
@@ -93,13 +93,18 @@ export async function loginUser(req: Request, res: Response) {
       throw new ApiException('Validation error', 422, errors);
     }
 
-    const user: User | null = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
       logger.warn('User not found during login attempt', { email });
       throw new ApiException('User not found', 404);
+    }
+
+    if (user.isLoggedIn) { 
+      logger.warn('User already logged in', { email });
+      throw new ApiException('User already logged in', 400);
     }
 
     const verifyPassword = await bcrypt.compare(password, user.password);
@@ -109,11 +114,24 @@ export async function loginUser(req: Request, res: Response) {
       throw new ApiException('Invalid password', 401);
     }
 
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
+    await prisma.loginLog.create({
+      data: {
+        userId: user.id,
+        ipAddress: String(ipAddress),
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isLoggedIn: true },
+    });
+
     const token = await TokenService.generateUserToken(user);
 
     res.cookie('accessToken', token, {
       httpOnly: true,
-      secure: (process.env.NODE_ENV as string) === 'production',
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 1000 * 60 * 60 * 24,
     });
@@ -142,6 +160,7 @@ export async function loginUser(req: Request, res: Response) {
     throw error;
   }
 }
+
 
 export async function logoutUser(req: Request, res: Response) {
   logger.info('Received request to log out user');

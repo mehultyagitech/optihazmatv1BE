@@ -19,15 +19,17 @@ enum Role {
 }
 
 model User {
-  id        String      @id @default(uuid()) // Use UUID for MySQL
+  id        String      @id @default(uuid())
   email     String      @unique
   name      String?
   password  String
   roles     Role
   disabled  Boolean     @default(false)
+  isLoggedIn Boolean    @default(false)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   tokens    UserToken[]
+  loginLogs LoginLog[]
 }
 
 model UserToken {
@@ -37,7 +39,7 @@ model UserToken {
   disabled  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Add `onDelete` for referential integrity
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model role {
@@ -47,4 +49,13 @@ model role {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String
+  createdAt DateTime @default(now())
+}
+
 

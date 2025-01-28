@@ -1,5 +1,5 @@
 import { createLogger, format, transports, Logger } from "winston";
-
+import path from "path";
 const customLevels = {
   levels: {
     error: 0,
@@ -26,7 +26,7 @@ const logger: Logger = createLogger({
   ),
   transports: [
     new transports.Console(),
-    new transports.File({ filename: "logs/custom.log" }),
+    new transports.File({ filename: path.join(__dirname, "logs", "custom.log") }),
   ],
 });
 
