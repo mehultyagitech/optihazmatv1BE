@@ -58,4 +58,16 @@ model LoginLog {
   createdAt DateTime @default(now())
 }
 
+model ClientManager {
+  id            Int     @id @default(autoincrement())
+  companyName   String
+  address       String?
+  contactDetails String?
+  verifaviaId   String
+  isClient      Boolean @default(true)  // true for Client, false for Manager
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+
 

@@ -1,29 +1,32 @@
 import express, { ErrorRequestHandler } from 'express';
 import RateLimit from 'express-rate-limit';
+import { createServer } from 'node:http';
 import dotenv from 'dotenv';
 import logger from 'morgan';
+import cors, { CorsOptions } from 'cors';
 import helmet from 'helmet';
-import cors from 'cors';
+import CookieParser from 'cookie-parser';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
 
 dotenv.config();
 
 const app = express();
+app.use(CookieParser());
 
-app.use(cors({
+const corsOptions: CorsOptions = {
   origin: 'http://localhost:5173',
-  methods: 'GET,POST,PUT,DELETE',
   credentials: true,
-}));
+};
 
 app.use(logger('dev'));
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json());
 
 const limit = RateLimit({
   windowMs: 60 * 1000,
-  max: 15,
+  max: 60,
 });
 
 app.use('/api/', limit);
@@ -39,6 +42,9 @@ app.use(fallback);
 
 const PORT = process.env.APP_PORT ?? 3005;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+const server = createServer(app);
+
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

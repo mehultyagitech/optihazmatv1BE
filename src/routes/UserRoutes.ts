@@ -4,6 +4,7 @@ import { getUsers, getUser, disableUser } from '../controllers/UserController';
 import Authenticate from '../middlewares/Authenticate';
 import HasRole from '../middlewares/HasRole';
 import Paginate from '../middlewares/Pagination';
+import { getClientManagers,getClientManager,createClientManager,updateClientManager } from '../controllers/ClientManagerController';
 
 const UserRoutes = Router();
 
@@ -15,5 +16,9 @@ UserRoutes.post(
   HasRole(Role.ADMIN),
   disableUser,
 );
+UserRoutes.get('/client-managers', Authenticate, getClientManagers); // Get all Client/Managers
+UserRoutes.get('/client-managers/:id', Authenticate, getClientManager); // Get a single Client/Manager by ID
+UserRoutes.post('/client-managers', Authenticate, createClientManager); // Create a new Client/Manager
+UserRoutes.put('/client-managers/:id', Authenticate, updateClientManager); // Update a Client/Manager
 
 export default UserRoutes;
