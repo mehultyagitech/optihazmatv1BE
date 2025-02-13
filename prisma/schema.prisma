@@ -19,21 +19,23 @@ enum Role {
 }
 
 model User {
-  id        String      @id @default(uuid())
-  email     String      @unique
-  name      String?
-  password  String
-  roles     Role
-  disabled  Boolean     @default(false)
-  isLoggedIn Boolean    @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  tokens    UserToken[]
-  loginLogs LoginLog[]
+  id            String      @id @default(uuid())
+  email         String      @unique
+  name          String?
+  password      String
+  roles         Role
+  disabled      Boolean     @default(false)
+  sessionsCount Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  tokens        UserToken[]
+  loginLogs     LoginLog[]
+  Vessel        Vessel[]
+  Pins          Pins[]
 }
 
 model UserToken {
-  id        String   @id @default(uuid()) // Use UUID for MySQL
+  id        String   @id @default(uuid())
   userId    String
   token     String
   disabled  Boolean  @default(false)
@@ -43,15 +45,15 @@ model UserToken {
 }
 
 model role {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LoginLog {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ipAddress String
@@ -59,15 +61,90 @@ model LoginLog {
 }
 
 model ClientManager {
-  id            Int     @id @default(autoincrement())
-  companyName   String
-  address       String?
+  id             Int      @id @default(autoincrement())
+  companyName    String
+  address        String?
   contactDetails String?
-  verifaviaId   String
-  isClient      Boolean @default(true)  // true for Client, false for Manager
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  verifaviaId    String
+  isClient       Boolean  @default(true) // true for Client, false for Manager
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  Vessel         Vessel[]
 }
 
+model Vessel {
+  id                     String              @id @default(uuid())
+  vesselName             String
+  imoNumber              String
+  vesselType             String?
+  flag                   String?
+  classSociety           String?
+  portOfRegistry         String?
+  grossTonnageMT         Float?
+  lbd                    String? // L*B*D
+  registeredOwner        String?
+  registeredOwnerAddress String?
+  vesselManager          String?
+  clientName             String?
+  deliveryDate           DateTime?
+  keelLaidDate           DateTime?
+  shipYardName           String?
+  shipYardAddress        String?
+  ihmClass               String?
+  ihmSurveyStartDate     DateTime?
+  ihmSurveyEndDate       DateTime?
+  socIssueDate           DateTime?
+  readyForMaintenance    Boolean?
+  maintenanceStartDate   DateTime?
+  vesselEmailId          String?
+  clientId               Int?
+  clientManager          ClientManager?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy              String?
+  user                   User?               @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  VesselAttachments      VesselAttachments[]
+  VesselImages           VesselImages[]
+}
 
+model VesselAttachments {
+  id        String   @id @default(uuid())
+  url       String
+  vesselId  String
+  vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
+model VesselImages {
+  id        String   @id @default(uuid())
+  url       String
+  vesselId  String
+  vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Pins      Pins[]
+}
+
+model Pins {
+  id        String       @id @default(uuid())
+  x         Float
+  y         Float
+  label     String
+  imageId   String
+  image     VesselImages @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  PinImages PinImages[]
+}
+
+model PinImages {
+  id        String   @id @default(uuid())
+  url       String
+  pinId     String
+  pin       Pins     @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

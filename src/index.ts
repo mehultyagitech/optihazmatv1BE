@@ -8,6 +8,8 @@ import helmet from 'helmet';
 import CookieParser from 'cookie-parser';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
+import VesselRoutes from './routes/VesselRoutes';
+import PinRoutes from './routes/PinRoutes';
 
 dotenv.config();
 
@@ -32,6 +34,8 @@ const limit = RateLimit({
 app.use('/api/', limit);
 app.use('/api/users', UserRoutes);
 app.use('/api/auth', AuthRoutes);
+app.use('/api/vessels', VesselRoutes);
+app.use('/api/pins', PinRoutes);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const fallback: ErrorRequestHandler = (err, _req, res, _next) => {

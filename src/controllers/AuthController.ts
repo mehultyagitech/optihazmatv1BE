@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User, Role, LoginLog } from '@prisma/client';
+import { User, Role, UserToken } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import ApiException from '../errors/ApiException';
 import prisma from '../database/Prisma';
@@ -102,9 +102,30 @@ export async function loginUser(req: Request, res: Response) {
       throw new ApiException('User not found', 404);
     }
 
-    if (user.isLoggedIn) { 
+    const userTokens: UserToken[] = await prisma.userToken.findMany({
+      where: { userId: user.id, disabled: false },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (user.sessionsCount > 0 && userTokens.length > user.sessionsCount) { 
       logger.warn('User already logged in', { email });
-      throw new ApiException('User already logged in', 400);
+      
+      // Disable the oldest tokens if the user has reached the session limit
+      if (process.env.LOGOUT_SHIFT as string === 'true') {
+        const slice = userTokens.slice(0, userTokens.length - user.sessionsCount);
+        await prisma.userToken.updateMany({
+          where: {
+            id: {
+              in: slice.map((token) => token.id),
+            },
+          },
+          data: {
+            disabled: true,
+          },
+        }); 
+      } else {
+        throw new ApiException('User already logged in', 400);
+      }
     }
 
     const verifyPassword = await bcrypt.compare(password, user.password);
@@ -120,11 +141,6 @@ export async function loginUser(req: Request, res: Response) {
         userId: user.id,
         ipAddress: String(ipAddress),
       },
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { isLoggedIn: true },
     });
 
     const token = await TokenService.generateUserToken(user);
