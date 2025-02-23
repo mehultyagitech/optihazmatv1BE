@@ -75,7 +75,7 @@ model ClientManager {
 model Vessel {
   id                     String              @id @default(uuid())
   vesselName             String
-  imoNumber              String
+  imoNumber              String              @unique
   vesselType             String?
   flag                   String?
   classSociety           String?
