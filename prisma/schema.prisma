@@ -76,27 +76,31 @@ model Vessel {
   id                     String              @id @default(uuid())
   vesselName             String
   imoNumber              String              @unique
-  vesselType             String?
-  flag                   String?
-  classSociety           String?
-  portOfRegistry         String?
-  grossTonnageMT         Float?
-  lbd                    String? // L*B*D
-  registeredOwner        String?
-  registeredOwnerAddress String?
-  vesselManager          String?
-  clientName             String?
-  deliveryDate           DateTime?
-  keelLaidDate           DateTime?
-  shipYardName           String?
-  shipYardAddress        String?
-  ihmClass               String?
-  ihmSurveyStartDate     DateTime?
-  ihmSurveyEndDate       DateTime?
-  socIssueDate           DateTime?
-  readyForMaintenance    Boolean?
-  maintenanceStartDate   DateTime?
-  vesselEmailId          String?
+  vesselType             String
+  flag                   String
+  classSociety           String
+  portOfRegistry         String
+  grossTonnageMT         Int
+  lbd                    String // L*B*D
+  registeredOwner        String
+  registeredOwnerAddress String
+  vesselManager          String
+  clientName             String
+  deliveryDate           DateTime
+  keelLaidDate           DateTime
+  shipYardName           String
+  shipYardAddress        String
+  ihmClass               String
+  ihmSurveyStartDate     DateTime
+  ihmSurveyEndDate       DateTime
+  socIssueDate           DateTime
+  readyForMaintenance    Boolean            @default(false)
+  maintenanceStartDate   DateTime
+  vesselEmailId          String
+  headerFreeTextCaption  String?
+  headerFreeTextValue    String?
+  poDataGapDisclaimer    String?
+  commonReferenceNo      String?
   clientId               Int?
   clientManager          ClientManager?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdBy              String?

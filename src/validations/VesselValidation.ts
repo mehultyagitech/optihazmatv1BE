@@ -1,37 +1,91 @@
-import joi from 'joi';
+import Joi from 'joi';
+import prisma from '../database/Prisma';
 
-export const vesselDataValidation = joi.object({
-  vesselName: joi.string().required(),
-  imoNumber: joi.string().required(),
-  vesselType: joi.string().optional(),
-  flag: joi.string().optional(),
-  classSociety: joi.string().optional(),
-  portOfRegistry: joi.string().optional(),
-  grossTonnageMT: joi.number().optional(),
-  lbd: joi.string().optional(),
-  registeredOwner: joi.string().optional(),
-  registeredOwnerAddress: joi.string().optional(),
-  vesselManager: joi.string().optional(),
-  clientName: joi.string().optional(),
-  deliveryDate: joi.date().optional(),
-  keelLaidDate: joi.date().optional(),
-  shipYardName: joi.string().optional(),
-  shipYardAddress: joi.string().optional(),
-  ihmClass: joi.string().optional(),
-  ihmSurveyStartDate: joi.date().optional(),
-  ihmSurveyEndDateIsSame: joi.boolean().optional(),
-  ihmSurveyEndDate: joi.date().optional(),
-  socIssueDate: joi.date().optional(),
-  readyForMaintenance: joi.boolean().optional(),
-  maintenanceStartDate: joi.date().optional(),
-  vesselEmailId: joi.string().optional(),
+export const vesselDataValidation = Joi.object({
+  vesselName: Joi.string().required(),
+  imoNumber: Joi.string().required().external(async (value, helpers) => {
+    const vessel = await prisma.vessel.findFirst({
+      where: { imoNumber: value },
+    });
+    if (vessel) {
+      return helpers.error('any.custom', { message: 'IMO Number already exists' });
+    }
+    return value;
+  }),
+  vesselType: Joi.string().optional(),
+  flag: Joi.string().optional(),
+  classSociety: Joi.string().optional(),
+  portOfRegistry: Joi.string().optional(),
+  grossTonnageMT: Joi.number().optional(),
+  lbd: Joi.string().optional(),
+  registeredOwner: Joi.string().optional(),
+  registeredOwnerAddress: Joi.string().optional(),
+  vesselManager: Joi.string().optional(),
+  clientName: Joi.string().optional(),
+  deliveryDate: Joi.date().optional(),
+  keelLaidDate: Joi.date().optional(),
+  shipYardName: Joi.string().optional(),
+  shipYardAddress: Joi.string().optional(),
+  ihmClass: Joi.string().valid("Class A", "Class B", "Class C").optional(),
+  ihmSurveyStartDate: Joi.date().optional(),
+  ihmSurveyEndDate: Joi.date().optional(),
+  socIssueDate: Joi.date().optional(),
+  readyForMaintenance: Joi.boolean().optional(),
+  maintenanceStartDate: Joi.date().optional(),
+  vesselEmailId: Joi.string()
+    .email({ tlds: { allow: false } })
+    .optional()
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/),
+  headerFreeTextCaption: Joi.string().max(20).optional(),
+  headerFreeTextValue: Joi.string().max(40).optional(),
+  poDataGapDisclaimer: Joi.string().max(500).optional(),
+  commonReferenceNo: Joi.string().optional(),
+  clientId: Joi.number().optional(),
+  createdBy: Joi.string().optional(),
 });
 
-export const clientManagerValidation = joi.object({
-  id: joi.number().required(),
-  companyName: joi.string().required(),
-  address: joi.string().optional(),
-  contactDetails: joi.string().optional(),
-  verifaviaId: joi.string().required(),
-  isClient: joi.boolean().optional(),
+export const vesselUpdateValidation = (id: string) => Joi.object({
+  vesselName: Joi.string().required(),
+  imoNumber: Joi.string().required().external(async (value, helpers) => {
+    const vessel = await prisma.vessel.findFirst({
+      where: { 
+        imoNumber: value,
+        NOT: { id: id }
+      },
+    });
+    if (vessel) {
+      return helpers.error('any.custom', { message: 'IMO Number already exists' });
+    }
+    return value;
+  }),
+  vesselType: Joi.string().optional(),
+  flag: Joi.string().optional(),
+  classSociety: Joi.string().optional(),
+  portOfRegistry: Joi.string().optional(),
+  grossTonnageMT: Joi.number().optional(),
+  lbd: Joi.string().optional(),
+  registeredOwner: Joi.string().optional(),
+  registeredOwnerAddress: Joi.string().optional(),
+  vesselManager: Joi.string().optional(),
+  clientName: Joi.string().optional(),
+  deliveryDate: Joi.date().optional(),
+  keelLaidDate: Joi.date().optional(),
+  shipYardName: Joi.string().optional(),
+  shipYardAddress: Joi.string().optional(),
+  ihmClass: Joi.string().valid("Class A", "Class B", "Class C").optional(),
+  ihmSurveyStartDate: Joi.date().optional(),
+  ihmSurveyEndDate: Joi.date().optional(),
+  socIssueDate: Joi.date().optional(),
+  readyForMaintenance: Joi.boolean().optional(),
+  maintenanceStartDate: Joi.date().optional(),
+  vesselEmailId: Joi.string()
+    .email({ tlds: { allow: false } })
+    .optional()
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/),
+  headerFreeTextCaption: Joi.string().max(20).optional(),
+  headerFreeTextValue: Joi.string().max(40).optional(),
+  poDataGapDisclaimer: Joi.string().max(500).optional(),
+  commonReferenceNo: Joi.string().optional(),
+  clientId: Joi.number().optional(),
+  createdBy: Joi.string().optional(),
 });
