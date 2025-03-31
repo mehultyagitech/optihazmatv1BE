@@ -4,7 +4,7 @@ import prisma from '../database/Prisma';
 
 export async function getUsers(req: Request, res: Response) {
   try {
-    const { page, limit, offset } = req.body.pagination;
+    const { page, limit, offset } = res.locals.pagination;
 
     const usersCount = await prisma.user.count();
 

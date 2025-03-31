@@ -181,7 +181,7 @@ export async function loginUser(req: Request, res: Response) {
 export async function logoutUser(req: Request, res: Response) {
   logger.info('Received request to log out user');
   try {
-    const { token } = req.body;
+    const { token } = res.locals;
 
     await TokenService.logoutUser(token);
 
@@ -207,7 +207,7 @@ export async function logoutUser(req: Request, res: Response) {
 export async function logoutFromAllDevices(req: Request, res: Response) {
   logger.info('Received request to log out user from all devices');
   try {
-    const { user } = req.body;
+    const { user } = res.locals;
 
     await TokenService.logoutFromAllDevices(user);
 

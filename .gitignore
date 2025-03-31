@@ -27,3 +27,4 @@ dist-ssr
 prisma/migrations
 
 uploads
+public/uploads/*

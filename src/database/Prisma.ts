@@ -1,4 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import {
+  PaginatedResponse,
+  PaginationParams,
+} from '../interfaces/AppCommonInterface';
+import { where as whereArgs, findManyArgs } from '../interfaces/PrismaInterface';
 
 /**
  * Extended Prisma Client with withCount method
@@ -8,34 +13,44 @@ const extendedPrismaClient = () => {
   const prisma = new PrismaClient().$extends({
     model: {
       $allModels: {
-        async withCount<T, A>(
-          this: T,
-          args?: A & {
-            where?: any;
-            orderBy?: any;
-            skip?: number;
-            take?: number;
-            include?: any;
-            select?: any;
-          }
-        ): Promise<{ data: any[]; count: number }> {
-          const { skip, take, ...rest } = args || {};
-          // @ts-ignore - this is type-safe but TypeScript doesn't recognize it
-          const dataPromise = (this as any).findMany({
-            ...rest,
+        async paginate<T>({
+          page = 1,
+          limit = 10,
+          offset,
+          where = {},
+          orderBy = {},
+          include,
+          select,
+        }: PaginationParams): Promise<PaginatedResponse<T>> {
+          const skip = offset !== undefined ? offset : (page - 1) * limit;
+  
+          // @ts-expect-error - This works at runtime but TypeScript doesn't know about it
+          const totalCount = await this.count({ where });
+  
+          const queryOptions: whereArgs & findManyArgs = {
             skip,
-            take,
-          });
-          
-          // @ts-ignore - this is type-safe but TypeScript doesn't recognize it
-          const countPromise = (this as any).count({
-            // @ts-expect-error - this is type-safe but TypeScript doesn't recognize it
-            where: rest?.where,
-          });
-          
-          const [data, count] = await Promise.all([dataPromise, countPromise]);
-          
-          return { data, count };
+            take: limit,
+            where,
+            orderBy,
+          };
+  
+          if (include) queryOptions.include = include;
+          if (select) queryOptions.select = select;
+  
+          // @ts-expect-error - This works at runtime but TypeScript doesn't know about it
+          const data = await this.findMany(queryOptions);
+  
+          return {
+            data,
+            meta: {
+              page,
+              limit,
+              total: {
+                items: totalCount,
+                pages: Math.ceil(totalCount / limit),
+              },
+            },
+          };
         },
       },
     },

@@ -50,8 +50,8 @@ export default async function Authenticate(
       throw new ApiException(UNAUTHORIZED_MESSAGE, 401);
     }
 
-    req.body.token = decoded;
-    req.body.user = user;
+    res.locals.user = user;
+    res.locals.token = tokenRecord;
 
     next();
   } catch (error) {

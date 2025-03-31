@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
 import {
   vesselDataValidation,
-  vesselUpdateValidation
+  vesselUpdateValidation,
 } from '../validations/VesselValidation';
 import ApiException from '../errors/ApiException';
 import { validateAsync } from '../services/ValidationService';
@@ -10,7 +10,8 @@ import { validateAsync } from '../services/ValidationService';
 export const getAllVessels = async (req: Request, res: Response) => {
   try {
     const { search } = req.query;
-    const { page, limit, offset } = req.body.pagination;
+    const pagination = res.locals.pagination;
+    const { page, limit, offset } = pagination;
 
     let where = {};
     if (!!search) {
@@ -24,31 +25,45 @@ export const getAllVessels = async (req: Request, res: Response) => {
       };
     }
 
-    const result = await prisma.vessel.withCount({
+    const result = await prisma.vessel.paginate({
+      page: Number(page),
+      limit: Number(limit),
+      offset,
       where,
-      skip: offset,
-      take: Number(limit),
-      include: {
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        imoNumber: true,
+        clientName: true,
+        clientManager: true,
+        vesselType: true,
+        vesselName: true,
+        vesselManager: true,
+        VesselImages: {
+          select: {
+            id: true,
+            url: true,
+          }
+        },
         user: {
           select: {
             id: true,
             name: true,
             email: true,
-          }
+          },
         },
       },
-      orderBy: { createdAt: 'desc' }
     });
 
-    res.json({ 
-      success: true, 
-      data: result.data, 
+    res.json({
+      success: true,
+      data: result.data,
       meta: {
-        total: result.count,
-        page: Number(page),
-        limit: Number(limit),
-        pageCount: Math.ceil(result.count / Number(limit))
-      } 
+        total: result.meta.total.items,
+        page: result.meta.page,
+        limit: result.meta.limit,
+        pageCount: result.meta.total.pages,
+      },
     });
   } catch (error) {
     if (error instanceof ApiException) {
@@ -72,9 +87,11 @@ export const getVesselById = async (req: Request, res: Response) => {
             id: true,
             name: true,
             email: true,
-          }
+          },
         },
-      }
+        VesselImages: true,
+        VesselAttachments: true,
+      },
     });
     if (!vessel) return res.status(404).json({ error: 'Vessel not found' });
     res.json({ success: true, data: vessel });
@@ -92,21 +109,20 @@ export const getVesselById = async (req: Request, res: Response) => {
 
 export const createVessel = async (req: Request, res: Response) => {
   try {
-    const { user, token, ...vesselData } = req.body;
-    
+    const { user } = res.locals;
+    const vesselData = req.body;
+
     if (vesselData.ihmSurveyEndDateIsSame) {
       vesselData.ihmSurveyEndDate = vesselData.ihmSurveyStartDate;
       delete vesselData.ihmSurveyEndDateIsSame;
     }
 
     // Use validateAsync for schemas with external rules
-    const { hasError: vesselDataError, errors: vesselDataErrors } = await validateAsync(
-      vesselDataValidation,
-      vesselData,
-    );
+    const { hasError: vesselDataError, errors: vesselDataErrors } =
+      await validateAsync(vesselDataValidation, vesselData);
 
     if (!!vesselDataError) {
-        throw new ApiException('Validation error', 422, vesselDataErrors);
+      throw new ApiException('Validation error', 422, vesselDataErrors);
     }
 
     vesselData.createdBy = user.id;
@@ -117,9 +133,36 @@ export const createVessel = async (req: Request, res: Response) => {
       data: vesselData,
     });
 
+    if (!!req.files) {
+      // @ts-expect-error
+      const { image, "attachments[]": attachments } = req.files;
+      
+      if (!!image) {
+        await prisma.vesselImages.create({
+          data: {
+            fileName: image[0].originalname,
+            url: image[0].filename,
+            vesselId: vessel.id,
+          },
+        });
+      }
+
+      if (!!attachments && attachments.length > 0) {
+        for (const file of attachments) {
+          await prisma.vesselAttachments.create({
+            data: {
+              fileName: file.originalname,
+              url: file.filename,
+              vesselId: vessel.id,
+            },
+          });
+        }
+      }
+    }
+
     res.status(201).json(vessel);
   } catch (error) {
-        if (error instanceof ApiException) {
+    if (error instanceof ApiException) {
       return res.status(error.status).json({
         success: false,
         message: error.message,
@@ -132,17 +175,15 @@ export const createVessel = async (req: Request, res: Response) => {
 
 export const updateVessel = async (req: Request, res: Response) => {
   try {
-    const { user, token, ...vesselData } = req.body;
+    const { data } = req.body;
+    const vesselData = JSON.parse(data);
 
     if (vesselData.id !== req.params.id) {
       // If validation needed for update
       const joiObject = vesselUpdateValidation(req.params.id);
 
-      const { hasError, errors } = await validateAsync(
-        joiObject,
-        vesselData
-      );
-      
+      const { hasError, errors } = await validateAsync(joiObject, vesselData);
+
       if (hasError) {
         throw new ApiException('Validation error', 422, errors);
       }
@@ -152,6 +193,39 @@ export const updateVessel = async (req: Request, res: Response) => {
       where: { id: req.params.id },
       data: vesselData,
     });
+
+    if (!!req.files) {
+      // @ts-expect-error
+      const { image, "attachments[]": attachments } = req.files;
+      
+      if (!!image) {
+        await prisma.vesselImages.deleteMany({
+          where: {
+            vesselId: vessel.id,
+          }
+        });
+
+        await prisma.vesselImages.create({
+          data: {
+            fileName: image[0].originalname,
+            url: image[0].filename,
+            vesselId: vessel.id,
+          },
+        });
+      }
+
+      if (!!attachments && attachments.length > 0) {
+        for (const file of attachments) {
+          await prisma.vesselAttachments.create({
+            data: {
+              fileName: file.originalname,
+              url: file.filename,
+              vesselId: vessel.id,
+            },
+          });
+        }
+      }
+    }
 
     res.json(vessel);
   } catch (error) {

@@ -1,8 +1,20 @@
+import { where, orderBy, include, select } from "./PrismaInterface";
+
 export interface JwtToken {
   id: string;
   name: string | null;
   email: string;
   expiresAt: Date;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  offset?: number;
+  where?: where;
+  orderBy?: orderBy;
+  include?: include;
+  select?: select;
 }
 
 export interface PaginationMeta {

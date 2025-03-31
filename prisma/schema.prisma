@@ -113,6 +113,7 @@ model Vessel {
 
 model VesselAttachments {
   id        String   @id @default(uuid())
+  fileName  String
   url       String
   vesselId  String
   vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
@@ -122,6 +123,7 @@ model VesselAttachments {
 
 model VesselImages {
   id        String   @id @default(uuid())
+  fileName  String
   url       String
   vesselId  String
   vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)

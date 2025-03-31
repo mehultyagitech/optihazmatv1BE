@@ -11,6 +11,7 @@ import multer from 'multer';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
 import VesselRoutes from './routes/VesselRoutes';
+import AttachmentRoutes from './routes/AttachmentRoutes';
 import PinRoutes from './routes/PinRoutes';
 
 dotenv.config();
@@ -23,6 +24,7 @@ const corsOptions: CorsOptions = {
   credentials: true,
 };
 
+app.use(express.static('public'));
 app.use(logger('dev'));
 app.use(cors(corsOptions));
 app.use(helmet());
@@ -41,6 +43,7 @@ app.use('/api/users', UserRoutes);
 app.use('/api/auth', AuthRoutes);
 app.use('/api/vessels', VesselRoutes);
 app.use('/api/pins', PinRoutes);
+app.use('/api/attachments', AttachmentRoutes);
 
 // Multer error handling middleware
 const multerErrorHandler: ErrorRequestHandler = (err, req, res, next) => {

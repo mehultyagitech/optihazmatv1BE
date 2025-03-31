@@ -16,7 +16,11 @@ export default function Paginate(
 
   const offset = (page - 1) * limit;
 
-  req.body.pagination = { page, limit, offset };
+  res.locals.pagination = {
+    page,
+    limit,
+    offset,
+  };
 
   next();
 }
