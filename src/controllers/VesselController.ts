@@ -134,8 +134,7 @@ export const createVessel = async (req: Request, res: Response) => {
     });
 
     if (!!req.files) {
-      // @ts-expect-error
-      const { image, "attachments[]": attachments } = req.files;
+      const { image, "attachments[]": attachments } = req.files as { [fieldname: string]: Express.Multer.File[] };
       
       if (!!image) {
         await prisma.vesselImages.create({

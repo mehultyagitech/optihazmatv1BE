@@ -94,7 +94,7 @@ model Vessel {
   ihmSurveyStartDate     DateTime
   ihmSurveyEndDate       DateTime
   socIssueDate           DateTime
-  readyForMaintenance    Boolean            @default(false)
+  readyForMaintenance    Boolean             @default(false)
   maintenanceStartDate   DateTime
   vesselEmailId          String
   headerFreeTextCaption  String?
@@ -119,6 +119,7 @@ model VesselAttachments {
   vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Pins      Pins[]
 }
 
 model VesselImages {
@@ -129,25 +130,25 @@ model VesselImages {
   vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  Pins      Pins[]
 }
 
 model Pins {
-  id        String       @id @default(uuid())
-  x         Float
-  y         Float
-  label     String
-  imageId   String
-  image     VesselImages @relation(fields: [imageId], references: [id], onDelete: Cascade)
-  userId    String?
-  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  PinImages PinImages[]
+  id             String            @id @default(uuid())
+  x              Float
+  y              Float
+  label          String
+  attachmentId   String
+  attachment     VesselAttachments @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  PinAttachments PinAttachments[]
 }
 
-model PinImages {
+model PinAttachments {
   id        String   @id @default(uuid())
+  fileName  String
   url       String
   pinId     String
   pin       Pins     @relation(fields: [pinId], references: [id], onDelete: Cascade)

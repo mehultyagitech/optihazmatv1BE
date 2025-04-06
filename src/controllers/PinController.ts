@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
-import { pinDataValidation, pinImageValidation } from '../validations/PinValidation';
+import {
+  pinDataValidation,
+  pinImageValidation,
+} from '../validations/PinValidation';
 import ApiException from '../errors/ApiException';
 import validate from '../services/ValidationService';
 
@@ -8,9 +11,12 @@ export const getAllPins = async (req: Request, res: Response) => {
   try {
     const { imageId } = req.query;
     const pins = await prisma.pins.findMany({
-        where: { imageId: imageId as string },
+      where: { attachmentId: imageId as string },
     });
-    res.json(pins);
+    res.status(200).json({
+      success: true,
+      data: pins,
+    });
   } catch (error) {
     if (error instanceof ApiException) {
       return res.status(error.status).json({
@@ -44,10 +50,14 @@ export const getPinById = async (req: Request, res: Response) => {
 
 export const createPin = async (req: Request, res: Response) => {
   try {
-    const { pinData } = req.body;
-    const { images } = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const { user } = res.locals;
+    const pinData = req.body;
+    // const { "images[]": images } = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    const { hasError: pinDataError, errors: pinDataErrors } = validate(pinDataValidation, pinData);
+    const { hasError: pinDataError, errors: pinDataErrors } = validate(
+      pinDataValidation,
+      pinData,
+    );
 
     if (pinDataError) {
       throw new ApiException('Validation error', 422, {
@@ -56,16 +66,25 @@ export const createPin = async (req: Request, res: Response) => {
     }
 
     const pin = await prisma.pins.create({
-      data: pinData,
+      data: {
+        ...pinData,
+        userId: user.id,
+        attachmentId: req.body.attachmentId,
+      },
     });
 
-    if (images) {
-      await prisma.pinImages.createMany({
-        data: images.map((file) => ({
-          url: file.path,
-          pinId: pin.id,
-        })),
-      });
+    if (req.files) {
+      const { 'images[]': images } = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+      if (!!images) {
+        await prisma.pinAttachments.createMany({
+          data: images.map((file) => ({
+            pinId: pin.id,
+            url: file.path,
+            fileName: file.filename,
+          })),
+        });
+      }
     }
 
     res.status(201).json(pin);

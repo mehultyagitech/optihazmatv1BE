@@ -8,6 +8,9 @@ import { getClientManagers,getClientManager,createClientManager,updateClientMana
 
 const UserRoutes = Router();
 
+UserRoutes.get('/me', Authenticate, (_, res) => {
+  res.status(200).json({ success: true, data: res.locals.user });
+});
 UserRoutes.get('/users', Authenticate, HasRole(Role.ADMIN), Paginate, getUsers);
 UserRoutes.get('/users/:id', Authenticate, getUser);
 UserRoutes.post(

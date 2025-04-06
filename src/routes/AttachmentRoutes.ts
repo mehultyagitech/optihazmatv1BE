@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import Authenticate from '../middlewares/Authenticate';
-import { getAttachmentsByVesselId, deleteAttachmentById } from '../controllers/AttachmentController';
+import { getPinsByAttachmentId, getAttachmentsByVesselId, deleteAttachmentById } from '../controllers/AttachmentController';
 
 const router = Router();
 router.use(Authenticate);
 
-router.get('/:id', getAttachmentsByVesselId); // Get all attachments by vessel ID
-router.delete('/:id', deleteAttachmentById); // Delete attachment by ID
+router.get('/:id', getAttachmentsByVesselId);
+router.get('/:id/pins', getPinsByAttachmentId);
+router.delete('/:id', deleteAttachmentById);
 
 export default router;
