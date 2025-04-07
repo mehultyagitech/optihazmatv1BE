@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
+import crypto from 'node:crypto';
+import { basename } from 'path';
 import prisma from '../database/Prisma';
+import { convertPDFToImages } from '../utils/pdfToImage';
 import {
   vesselDataValidation,
   vesselUpdateValidation,
@@ -43,7 +46,7 @@ export const getAllVessels = async (req: Request, res: Response) => {
           select: {
             id: true,
             url: true,
-          }
+          },
         },
         user: {
           select: {
@@ -90,7 +93,11 @@ export const getVesselById = async (req: Request, res: Response) => {
           },
         },
         VesselImages: true,
-        VesselAttachments: true,
+        VesselAttachments: {
+          include: {
+            AttachmentImages: true,
+          },
+        },
       },
     });
     if (!vessel) return res.status(404).json({ error: 'Vessel not found' });
@@ -112,12 +119,14 @@ export const createVessel = async (req: Request, res: Response) => {
     const { user } = res.locals;
     const vesselData = req.body;
 
+    vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
+    vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
+
     if (vesselData.ihmSurveyEndDateIsSame) {
       vesselData.ihmSurveyEndDate = vesselData.ihmSurveyStartDate;
       delete vesselData.ihmSurveyEndDateIsSame;
     }
 
-    // Use validateAsync for schemas with external rules
     const { hasError: vesselDataError, errors: vesselDataErrors } =
       await validateAsync(vesselDataValidation, vesselData);
 
@@ -134,8 +143,10 @@ export const createVessel = async (req: Request, res: Response) => {
     });
 
     if (!!req.files) {
-      const { image, "attachments[]": attachments } = req.files as { [fieldname: string]: Express.Multer.File[] };
-      
+      const { image, 'attachments[]': attachments } = req.files as {
+        [fieldname: string]: Express.Multer.File[];
+      };
+
       if (!!image) {
         await prisma.vesselImages.create({
           data: {
@@ -147,14 +158,31 @@ export const createVessel = async (req: Request, res: Response) => {
       }
 
       if (!!attachments && attachments.length > 0) {
+        const uniqueFolderName = crypto.randomBytes(16).toString('hex');
         for (const file of attachments) {
-          await prisma.vesselAttachments.create({
+          const attachment = await prisma.vesselAttachments.create({
             data: {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
             },
           });
+
+          // Convert PDF to images if the file is a PDF
+          if (file.mimetype === 'application/pdf') {
+            const imagesPaths = await convertPDFToImages(file.path, uniqueFolderName);
+
+            let counter = 1;
+            for (const imagePath of imagesPaths) {
+              await prisma.attachmentImages.create({
+                data: {
+                  fileName: file.originalname.split('.')[0] + `-page-${counter++}.png`,
+                  url: imagePath,
+                  attachmentId: attachment.id,
+                },
+              });
+            }
+          }
         }
       }
     }
@@ -175,12 +203,10 @@ export const createVessel = async (req: Request, res: Response) => {
 export const updateVessel = async (req: Request, res: Response) => {
   try {
     const { data } = req.body;
-    const vesselData = JSON.parse(data);
+    const vesselData = typeof data === 'string' ? JSON.parse(data) : data;
 
     if (vesselData.id !== req.params.id) {
-      // If validation needed for update
       const joiObject = vesselUpdateValidation(req.params.id);
-
       const { hasError, errors } = await validateAsync(joiObject, vesselData);
 
       if (hasError) {
@@ -194,14 +220,15 @@ export const updateVessel = async (req: Request, res: Response) => {
     });
 
     if (!!req.files) {
-      // @ts-expect-error
-      const { image, "attachments[]": attachments } = req.files;
-      
+      const { image, 'attachments[]': attachments } = req.files as {
+        [fieldname: string]: Express.Multer.File[];
+      };
+
       if (!!image) {
         await prisma.vesselImages.deleteMany({
           where: {
             vesselId: vessel.id,
-          }
+          },
         });
 
         await prisma.vesselImages.create({
@@ -214,21 +241,38 @@ export const updateVessel = async (req: Request, res: Response) => {
       }
 
       if (!!attachments && attachments.length > 0) {
+        const uniqueFolderName = crypto.randomBytes(16).toString('hex');
         for (const file of attachments) {
-          await prisma.vesselAttachments.create({
+          const attachment = await prisma.vesselAttachments.create({
             data: {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
             },
           });
+
+          // Convert PDF to images if the file is a PDF
+          if (file.mimetype === 'application/pdf') {
+            const imagesPaths = await convertPDFToImages(file.path, uniqueFolderName);
+
+            // Save each generated image
+            let counter = 1; 
+            for (const imagePath of imagesPaths) {
+              await prisma.attachmentImages.create({
+                data: {
+                  fileName: file.originalname.split('.')[0] + `-page-${counter++}.`,
+                  url: imagePath,
+                  attachmentId: attachment.id,
+                },
+              });
+            }
+          }
         }
       }
     }
 
     res.json(vessel);
   } catch (error) {
-    console.error('Error in updateVessel:', error);
     if (error instanceof ApiException) {
       return res.status(error.status).json({
         success: false,
@@ -257,3 +301,26 @@ export const deleteVessel = async (req: Request, res: Response) => {
     throw error;
   }
 };
+
+export const getAttachmentNamesByVesselId = async (req: Request, res: Response) => {
+  try {
+    const vesselId = req.params.id;
+    const attachments = await prisma.vesselAttachments.findMany({
+      where: { vesselId },
+      select: {
+        id: true,
+        fileName: true,
+      },
+    });
+    res.json(attachments);
+  } catch (error) {
+    if (error instanceof ApiException) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+        data: error.data,
+      });
+    }
+    throw error;
+  }
+}

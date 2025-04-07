@@ -11,8 +11,14 @@ import multer from 'multer';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
 import VesselRoutes from './routes/VesselRoutes';
-import AttachmentRoutes from './routes/AttachmentRoutes';
 import PinRoutes from './routes/PinRoutes';
+import LocationRoutes from './routes/LocationRoutes';
+import SubLocationRoutes from './routes/SubLocationRoutes';
+import EquipmentRoutes from './routes/EquipmentRoutes';
+import ObjectRoutes from './routes/ObjectRoutes';
+import CompartmentRoutes from './routes/CompartmentRoutes';
+import DocumentTypeRoutes from './routes/DocumentTypeRoutes';
+import InventoryRoutes from './routes/InventoryRoutes';
 
 dotenv.config();
 
@@ -43,7 +49,13 @@ app.use('/api/users', UserRoutes);
 app.use('/api/auth', AuthRoutes);
 app.use('/api/vessels', VesselRoutes);
 app.use('/api/pins', PinRoutes);
-app.use('/api/attachments', AttachmentRoutes);
+app.use('/api/locations', LocationRoutes);
+app.use('/api/sub-locations', SubLocationRoutes);
+app.use('/api/equipments', EquipmentRoutes);
+app.use('/api/objects', ObjectRoutes);
+app.use('/api/compartments', CompartmentRoutes);
+app.use('/api/document-types', DocumentTypeRoutes);
+app.use('/api/inventory', InventoryRoutes);
 
 // Multer error handling middleware
 const multerErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
