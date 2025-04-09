@@ -106,3 +106,40 @@ export async function deleteDocumentType(req: Request, res: Response) {
     throw error;
   }
 }
+
+export async function getDocumentTypesImages(req: Request, res: Response) {
+  try {
+    const { documentTypeId, vesselID } = req.params;
+
+    const documentTypes = await prisma.documentType.findMany({
+      where: {
+        id: documentTypeId,
+        VesselAttachments: {
+          some:{
+            vesselId: vesselID,
+          }
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        VesselAttachments: {
+          select: {
+            id: true,
+            vesselId: true,
+            url: true,
+            AttachmentImages: true,
+          }
+        }
+      },
+    });
+
+    res.json({
+      success: true,
+      data: documentTypes,
+      message: 'Document types images fetched successfully',
+    });
+  } catch (error) {
+    throw error;
+  }
+}
