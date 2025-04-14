@@ -117,7 +117,7 @@ export const getVesselById = async (req: Request, res: Response) => {
 export const createVessel = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
-    const vesselData = req.body;
+    const { attachmentDocTypes, ...vesselData } = req.body;
 
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
@@ -158,6 +158,7 @@ export const createVessel = async (req: Request, res: Response) => {
       }
 
       if (!!attachments && attachments.length > 0) {
+        let counter = 0;
         const uniqueFolderName = crypto.randomBytes(16).toString('hex');
         for (const file of attachments) {
           const attachment = await prisma.vesselAttachments.create({
@@ -165,18 +166,23 @@ export const createVessel = async (req: Request, res: Response) => {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
+              documentTypeId: '31010fed-3437-4bed-bf40-19f8c3554f51',
             },
           });
 
           // Convert PDF to images if the file is a PDF
           if (file.mimetype === 'application/pdf') {
-            const imagesPaths = await convertPDFToImages(file.path, uniqueFolderName);
+            const imagesPaths = await convertPDFToImages(
+              file.path,
+              uniqueFolderName,
+            );
 
             let counter = 1;
             for (const imagePath of imagesPaths) {
               await prisma.attachmentImages.create({
                 data: {
-                  fileName: file.originalname.split('.')[0] + `-page-${counter++}.png`,
+                  fileName:
+                    file.originalname.split('.')[0] + `-page-${counter++}.png`,
                   url: imagePath,
                   attachmentId: attachment.id,
                 },
@@ -202,8 +208,7 @@ export const createVessel = async (req: Request, res: Response) => {
 
 export const updateVessel = async (req: Request, res: Response) => {
   try {
-    const { data } = req.body;
-    const vesselData = typeof data === 'string' ? JSON.parse(data) : data;
+    const { attachmentDocType, ...vesselData } = req.body;
 
     if (vesselData.id !== req.params.id) {
       const joiObject = vesselUpdateValidation(req.params.id);
@@ -241,6 +246,7 @@ export const updateVessel = async (req: Request, res: Response) => {
       }
 
       if (!!attachments && attachments.length > 0) {
+        let counter = 0;
         const uniqueFolderName = crypto.randomBytes(16).toString('hex');
         for (const file of attachments) {
           const attachment = await prisma.vesselAttachments.create({
@@ -248,19 +254,24 @@ export const updateVessel = async (req: Request, res: Response) => {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
+              documentTypeId: attachmentDocType[counter++],
             },
           });
 
           // Convert PDF to images if the file is a PDF
           if (file.mimetype === 'application/pdf') {
-            const imagesPaths = await convertPDFToImages(file.path, uniqueFolderName);
+            const imagesPaths = await convertPDFToImages(
+              file.path,
+              uniqueFolderName,
+            );
 
             // Save each generated image
-            let counter = 1; 
+            let counter = 1;
             for (const imagePath of imagesPaths) {
               await prisma.attachmentImages.create({
                 data: {
-                  fileName: file.originalname.split('.')[0] + `-page-${counter++}.`,
+                  fileName:
+                    file.originalname.split('.')[0] + `-page-${counter++}.`,
                   url: imagePath,
                   attachmentId: attachment.id,
                 },
@@ -302,7 +313,10 @@ export const deleteVessel = async (req: Request, res: Response) => {
   }
 };
 
-export const getAttachmentNamesByVesselId = async (req: Request, res: Response) => {
+export const getAttachmentNamesByVesselId = async (
+  req: Request,
+  res: Response,
+) => {
   try {
     const vesselId = req.params.id;
     const attachments = await prisma.vesselAttachments.findMany({
@@ -323,4 +337,4 @@ export const getAttachmentNamesByVesselId = async (req: Request, res: Response) 
     }
     throw error;
   }
-}
+};

@@ -10,6 +10,7 @@ import path from 'path';
 import multer from 'multer';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
+import GenericRoutes from './routes/GenericRoutes';
 import VesselRoutes from './routes/VesselRoutes';
 import PinRoutes from './routes/PinRoutes';
 import LocationRoutes from './routes/LocationRoutes';
@@ -56,6 +57,7 @@ app.use('/api/objects', ObjectRoutes);
 app.use('/api/compartments', CompartmentRoutes);
 app.use('/api/document-types', DocumentTypeRoutes);
 app.use('/api/inventory', InventoryRoutes);
+app.use('/api/generics', GenericRoutes);
 
 // Multer error handling middleware
 const multerErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
