@@ -31,14 +31,14 @@ const corsOptions: CorsOptions = {
   credentials: true,
 };
 
+app.use(cors(corsOptions));
 app.use(express.static('public'));
 app.use(logger('dev'));
-app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json());
 
-const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
+// const uploadsPath = path.join(__dirname, '../uploads');
+// app.use('/uploads', express.static(uploadsPath));
 
 const limit = RateLimit({
   windowMs: 60 * 1000,
