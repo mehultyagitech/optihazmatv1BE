@@ -60,6 +60,12 @@ export type PinOrderBy = Prisma.PinsOrderByWithRelationInput;
 export type PinInclude = Prisma.PinsInclude;
 export type PinSelect = Prisma.PinsSelect;
 
+// Location Diagram interfaces
+export type LocationDiagramWhere = Prisma.LocationDiagramWhereInput;
+export type LocationDiagramOrderBy = Prisma.LocationDiagramOrderByWithRelationInput;
+export type LocationDiagramInclude = Prisma.LocationDiagramInclude;
+export type LocationDiagramSelect = Prisma.LocationDiagramSelect;
+
 // Generic types for backward compatibility
 export type where = 
   | VesselWhere 
@@ -71,7 +77,8 @@ export type where =
   | DocumentTypeWhere
   | InventoryWhere
   | UserWhere
-  | PinWhere;
+  | PinWhere
+  | LocationDiagramWhere;
 
 export type orderBy = 
   | VesselOrderBy 
@@ -83,7 +90,8 @@ export type orderBy =
   | DocumentTypeOrderBy
   | InventoryOrderBy
   | UserOrderBy
-  | PinOrderBy;
+  | PinOrderBy
+  | LocationDiagramOrderBy;
 
 export type include = 
   | VesselInclude 
@@ -95,7 +103,8 @@ export type include =
   | DocumentTypeInclude
   | InventoryInclude
   | UserInclude
-  | PinInclude;
+  | PinInclude
+  | LocationDiagramInclude;
 
 export type select = 
   | VesselSelect 
@@ -107,7 +116,8 @@ export type select =
   | DocumentTypeSelect
   | InventorySelect
   | UserSelect
-  | PinSelect;
+  | PinSelect
+  | LocationDiagramSelect;
 
 export type findManyArgs = {
   skip?: number;

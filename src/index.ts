@@ -20,6 +20,7 @@ import ObjectRoutes from './routes/ObjectRoutes';
 import CompartmentRoutes from './routes/CompartmentRoutes';
 import DocumentTypeRoutes from './routes/DocumentTypeRoutes';
 import InventoryRoutes from './routes/InventoryRoutes';
+import LocationDiagramRoutes from './routes/LocationDiagramRoutes';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use('/api/compartments', CompartmentRoutes);
 app.use('/api/document-types', DocumentTypeRoutes);
 app.use('/api/inventory', InventoryRoutes);
 app.use('/api/generics', GenericRoutes);
+app.use('/api/location-diagrams', LocationDiagramRoutes);
 
 // Multer error handling middleware
 const multerErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
