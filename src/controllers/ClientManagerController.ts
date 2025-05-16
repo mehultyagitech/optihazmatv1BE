@@ -132,3 +132,25 @@ export async function updateClientManager(req: Request, res: Response) {
     throw error;
   }
 }
+
+/**
+ * Get all sub-locations
+ */
+export async function getSubLocation(req: Request, res: Response) {
+  try {
+    const clientManagers = await prisma.subLocations.findMany();
+
+    return res.status(200).json({
+      success: true,
+      data: clientManagers,
+    });
+  }  catch (error) {
+    if (error instanceof ApiException) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    throw error;
+  }
+}
