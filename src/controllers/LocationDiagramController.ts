@@ -59,3 +59,56 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
     throw error;
   }
 }
+
+export async function createLocationDiagram(req: Request, res: Response) {
+  try {
+    const { vesselId } = req.params;
+    const user = res.locals.user;
+    const { location: locationId, subLocationId, attachmentImageId: attachmentImageId } = req.body;
+    const image = req.file;
+
+    console.log('body', req.body);
+
+    if (!vesselId) {
+      throw new ApiException(
+        'Vessel ID is required',
+        400,
+      );
+    }
+
+    if (!image) {
+      throw new ApiException(
+        'Image is required',
+        400,
+      );
+    }
+
+    const locationDiagram = await prisma.locationDiagram.create({
+      data: {
+        locationId,
+        subLocationId,
+        attachmentImageId,
+        userId: user.id,
+        vesselId
+      }
+    });
+
+    const locationDiagramImage = await prisma.locationDiagramImage.create({
+      data: {
+        fileName: image.originalname,
+        url: image.filename,
+        locationDiagramId: locationDiagram.id,
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        locationDiagram,
+        locationDiagramImage,
+      }
+    });
+  } catch (error) {
+    throw error;
+  }
+}

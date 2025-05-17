@@ -138,7 +138,7 @@ export async function updateClientManager(req: Request, res: Response) {
  */
 export async function getSubLocation(req: Request, res: Response) {
   try {
-    const clientManagers = await prisma.subLocations.findMany();
+    const clientManagers = await prisma.subLocation.findMany();
 
     return res.status(200).json({
       success: true,
