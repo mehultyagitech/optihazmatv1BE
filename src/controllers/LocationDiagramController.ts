@@ -35,8 +35,40 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        AttachmentImage: true,
-        location: true
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          }
+        },
+        LocationDiagramImage: {
+          select: {
+            id: true,
+            url: true,
+            fileName: true,
+          }
+        },
+        location: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        subLocation: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        vessel: {
+          select: {
+            id: true,
+            clientName: true,
+            clientManager: true,
+            imoNumber: true,
+          }
+        }
       }
     });
 
