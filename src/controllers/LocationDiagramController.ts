@@ -99,8 +99,6 @@ export async function createLocationDiagram(req: Request, res: Response) {
     const { location: locationId, subLocationId, attachmentImageId: attachmentImageId } = req.body;
     const image = req.file;
 
-    console.log('body', req.file);
-
     if (!vesselId) {
       throw new ApiException(
         'Vessel ID is required',
