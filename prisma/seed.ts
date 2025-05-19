@@ -32,42 +32,56 @@ async function main() {
     },
   });
 
-  // Create default location
-  const location = await prisma.location.upsert({
-    where: { name: 'Default Location' },
-    update: {},
-    create: {
-      name: 'Default Location',
-    }
-  });
-
-  // Create default sublocation
-  const subLocation = await prisma.subLocation.upsert({
-    where: { name: 'Default Location' },
-    update: {},
-    create: {
-      name: 'Default Location',
-    }
-  });
-
-  // Create default equipment types
-  const equipment = await prisma.equipment.upsert({
-    where: { name: 'Default Equipment' },
-    update: {},
-    create: {
-      name: 'Default Equipment',
-    }
-  });
-
-  const additionalEquipment = [
-    'Pumps',
-    'Motors',
-    'Generators',
-    'Compressors',
-    'Electrical Panels'
+  const locationNames = [
+    'A-Deck',
+    'B-Deck',
+    'C-Deck',
+    'Engine Control Room',
+    'Fore Part',
+    'Nav Bridge Deck Plan'
   ];
 
-  for (const name of additionalEquipment) {
+  // Create default locations
+  for (const name of locationNames) {
+    await prisma.location.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  // Create default sublocation
+  const subLocationNames = [
+    '3rd Deck Starboard',
+    'Battery Room',
+    'Chain Locker',
+    'Engine room',
+    'Fire Station',
+    'Galley',
+    'Life Boat',
+    'Main Air Reservoir',	
+    "Master's Day Room"
+  ];
+
+  for (const name of subLocationNames) {
+    await prisma.subLocation.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  const equipmentNames = [
+    'IT Rack UPS 1 (Next Gen and NET SWAN)',
+    'BALLAST COMPUTER UPS BATTERY',
+    'CENTRIFUGAL PUMP (x1 piece/1)',
+    'FUEL GAS SUPPLY SYSTEM FOR ME-GI ENGINE (x1 piece/1) [MITSUBISHI SHIPBUILDING CO., LTD. : MSB-FGSS-0008]',
+    'GEAR PUMP (x1 piece/1)',
+    'HYDROPHORE TANK UNIT (x1 piece/1)'
+  ];
+
+  // Create default equipment
+  for (const name of equipmentNames) {
     await prisma.equipment.upsert({
       where: { name },
       update: {},
@@ -75,24 +89,17 @@ async function main() {
     });
   }
 
-  // Create default objects
-  const defaultObject = await prisma.objects.upsert({
-    where: { name: 'Default Object' },
-    update: {},
-    create: {
-      name: 'Default Object',
-    }
-  });
-
-  const additionalObjects = [
-    'Valves',
-    'Pipes',
-    'Tanks',
-    'Filters',
-    'Cables'
+  const objectNames = [
+    'Battery Electrodes',
+    'Electronic components on PCB',
+    'Floor Covering',
+    'Gauge',
+    'Lead solder',
+    'Actuator'
   ];
 
-  for (const name of additionalObjects) {
+  // Create default objects
+  for (const name of objectNames) {
     await prisma.objects.upsert({
       where: { name },
       update: {},
@@ -100,26 +107,21 @@ async function main() {
     });
   }
 
-  // Create default compartments
-  const compartment = await prisma.compartment.upsert({
-    where: { name: 'Default Compartment' },
-    update: {},
-    create: {
-      name: 'Default Compartment',
-    }
-  });
-
-  const additionalCompartments = [
-    'Engine Room',
-    'Bridge',
+  const compartmentNames = [
+    'A DECK',
+    'Accommodation Deck houses',
+    'Anti-slippery mat',
+    'Battery',
+    'Bulkhead & deckhead',
     'Deck',
-    'Cargo Hold',
-    'Living Quarters'
+    'Deck floor'
   ];
 
-  for (const name of additionalCompartments) {
-    await prisma.compartment.create({
-      data: { name },
+  for (const name of compartmentNames) {
+    await prisma.compartment.upsert({
+      where: { name },
+      update: {},
+      create: { name },
     });
   }
 
@@ -173,17 +175,7 @@ async function main() {
     });
   }
 
-  console.log({
-    admin,
-    user,
-    location,
-    subLocation,
-    equipment,
-    defaultObject,
-    compartment,
-    documentType,
-    inventory
-  });
+  console.log('Seeding completed successfully!');
 }
 
 main()
