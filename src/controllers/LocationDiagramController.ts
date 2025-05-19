@@ -67,6 +67,7 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
             clientName: true,
             clientManager: true,
             imoNumber: true,
+            vesselType: true,
           }
         }
       }
@@ -137,6 +138,75 @@ export async function createLocationDiagram(req: Request, res: Response) {
         locationDiagram,
         locationDiagramImage,
       }
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getLocationDiagramById(req: Request, res: Response) {
+  try {
+    const { LocationDiagramId: id } = req.params;
+
+    if (!id) {
+      throw new ApiException(
+        'Location diagram ID is required',
+        400,
+      );
+    }
+
+    const locationDiagram = await prisma.locationDiagram.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          }
+        },
+        LocationDiagramImage: {
+          select: {
+            id: true,
+            url: true,
+            fileName: true,
+          }
+        },
+        location: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        subLocation: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        vessel: {
+          select: {
+            id: true,
+            clientName: true,
+            clientManager: true,
+            imoNumber: true,
+            vesselType: true,
+          }
+        }
+      }
+    });
+
+    if (!locationDiagram) {
+      throw new ApiException(
+        'Location diagram not found',
+        404,
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: locationDiagram,
+      message: 'Location diagram fetched successfully',
     });
   } catch (error) {
     throw error;
