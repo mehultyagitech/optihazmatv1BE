@@ -166,7 +166,7 @@ export const createVessel = async (req: Request, res: Response) => {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
-              documentTypeId: '31010fed-3437-4bed-bf40-19f8c3554f51',
+              documentTypeId: 'b790ea82-29f7-4f43-95cf-f83c93ff30e0',
             },
           });
 

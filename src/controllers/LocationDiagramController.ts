@@ -192,6 +192,12 @@ export async function getLocationDiagramById(req: Request, res: Response) {
             imoNumber: true,
             vesselType: true,
           }
+        },
+        Pins: {
+          include: {
+            PinAttachments: true,
+            PinImages: true,
+          }
         }
       }
     });

@@ -27,13 +27,6 @@ export async function getAllSubLocations(req: Request, res: Response) {
         id: true,
         name: true,
         isDisabled: true,
-        locationId: true,
-        Location: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
       },
     });
 

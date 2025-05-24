@@ -24,7 +24,6 @@ model Location {
   isDisabled      Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  Pins            Pins[]
   LocationDiagram LocationDiagram[]
 }
 
@@ -73,6 +72,7 @@ model DocumentType {
   updatedAt         DateTime            @updatedAt
   Vessel            Vessel[]
   VesselAttachments VesselAttachments[]
+  PinAttachments    PinAttachments[]
 }
 
 model Inventory {
@@ -191,7 +191,6 @@ model VesselAttachments {
   vessel           Vessel             @relation(fields: [vesselId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-  Pins             Pins[]
   AttachmentImages AttachmentImages[]
 }
 
@@ -245,46 +244,44 @@ model LocationDiagramImage {
 }
 
 model Pins {
-  id                String            @id @default(uuid())
+  id                String           @id @default(uuid())
   x                 Float
   y                 Float
   locationDiagramId String
-  locationDiagram   LocationDiagram   @relation(fields: [locationDiagramId], references: [id], onDelete: Cascade)
+  locationDiagram   LocationDiagram  @relation(fields: [locationDiagramId], references: [id], onDelete: Cascade)
   subLocationId     String
-  subLocation       SubLocation       @relation(fields: [subLocationId], references: [id], onDelete: Cascade)
+  subLocation       SubLocation      @relation(fields: [subLocationId], references: [id], onDelete: Cascade)
   equipmentId       String
-  equipment         Equipment         @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipment         Equipment        @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   compartmentId     String
-  compartment       Compartment       @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
+  compartment       Compartment      @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
   ObjectId          String
-  object            Objects           @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
+  object            Objects          @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
   inventoryId       String
-  inventory         Inventory         @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventory         Inventory        @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   Description       String
-  isPCHM            Boolean           @default(false)
+  isPCHM            Boolean          @default(false)
   manufacturerBrand String
   referenceNo       String
-  remarks           String?
-  attachmentId      String
-  attachment        VesselAttachments @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
-  userId            String?
-  user              User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  remarks           String
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   PinAttachments    PinAttachments[]
   PinImages         PinImages[]
-  Location          Location?         @relation(fields: [locationId], references: [id])
-  locationId        String?
 }
 
 model PinAttachments {
-  id        String   @id @default(uuid())
-  fileName  String
-  url       String
-  pinId     String
-  pin       Pins     @relation(fields: [pinId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String       @id @default(uuid())
+  fileName       String
+  url            String
+  documentTypeId String
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  pinId          String
+  pin            Pins         @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model PinImages {

@@ -13,8 +13,8 @@ const router = Router();
 
 router.get('/', Authenticate, getAllPins);
 router.get('/:id', Authenticate, getPinById);
-router.post('/', Authenticate, upload.array('images[]'), createPin);
-router.put('/:id', Authenticate, updatePin);
+router.post('/', Authenticate, upload.any(), createPin);
+router.put('/:id', Authenticate, upload.any(), updatePin);
 router.delete('/:id', Authenticate, deletePin);
 
 export default router;
