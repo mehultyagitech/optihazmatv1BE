@@ -5,16 +5,24 @@ import { PinAttachments, PinImages, Pins } from '@prisma/client';
 
 export const getAllPins = async (req: Request, res: Response) => {
   try {
-    const { imageId: locationDiagramId } = req.query;
+    const { vesselId } = req.params;
 
-    if (!locationDiagramId) {
+    if (!vesselId) {
       throw new ApiException('Location Diagram ID is required', 400);
     }
 
     const pins = await prisma.pins.paginate<Pins>({
       where: {
-        locationDiagramId: locationDiagramId as string,
+        locationDiagram: {
+          vesselId: vesselId as string,
+        },
       },
+      include: {
+        inventory: true,
+        PinImages: true,
+        locationDiagram: true,
+        subLocation: true,
+      }
     });
 
     return res.json({
@@ -101,7 +109,7 @@ export const createPin = async (req: Request, res: Response) => {
         },
         inventory: {
           connect: {
-            id: pinData.inventoryClass,
+            id: pinData.inventory,
           },
         },
         Description: pinData.description,

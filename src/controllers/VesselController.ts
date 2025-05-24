@@ -117,7 +117,8 @@ export const getVesselById = async (req: Request, res: Response) => {
 export const createVessel = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
-    const { attachmentDocTypes, ...vesselData } = req.body;
+    const { data: vesselDataStr } = req.body;
+    const { attachments: dAtt, ...vesselData } = JSON.parse(vesselDataStr);
 
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
@@ -161,12 +162,20 @@ export const createVessel = async (req: Request, res: Response) => {
         let counter = 0;
         const uniqueFolderName = crypto.randomBytes(16).toString('hex');
         for (const file of attachments) {
+          // for (const file of attachments) {
+          const { docType } = dAtt[counter++];
+          if (!docType) {
+            throw new ApiException(
+              'Document type is required for each attachment',
+              422,
+            );
+          }
           const attachment = await prisma.vesselAttachments.create({
             data: {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
-              documentTypeId: 'b790ea82-29f7-4f43-95cf-f83c93ff30e0',
+              documentTypeId: docType,
             },
           });
 

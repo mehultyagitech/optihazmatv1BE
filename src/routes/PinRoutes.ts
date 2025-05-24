@@ -11,7 +11,7 @@ import Authenticate from '../middlewares/Authenticate';
 
 const router = Router();
 
-router.get('/', Authenticate, getAllPins);
+router.get('/list/:vesselId', Authenticate, getAllPins);
 router.get('/:id', Authenticate, getPinById);
 router.post('/', Authenticate, upload.any(), createPin);
 router.put('/:id', Authenticate, upload.any(), updatePin);

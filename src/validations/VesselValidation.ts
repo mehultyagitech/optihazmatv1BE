@@ -42,6 +42,7 @@ export const vesselDataValidation = Joi.object({
   commonReferenceNo: Joi.string().optional(),
   clientId: Joi.number().optional(),
   createdBy: Joi.string().optional(),
+  attachments: Joi.any().optional(),
 });
 
 export const vesselUpdateValidation = (id: string) => Joi.object({
