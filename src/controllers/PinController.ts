@@ -1,22 +1,46 @@
 import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
-import { PinAttachments, PinImages, Pins } from '@prisma/client';
+import { PinAttachments, PinImages, Pins, Prisma } from '@prisma/client';
 
 export const getAllPins = async (req: Request, res: Response) => {
   try {
     const { vesselId } = req.params;
+    const { search } = req.query;
+    const pagination = res.locals.pagination;
+    const { page, limit, offset } = pagination;
 
     if (!vesselId) {
       throw new ApiException('Location Diagram ID is required', 400);
     }
 
-    const pins = await prisma.pins.paginate<Pins>({
-      where: {
-        locationDiagram: {
-          vesselId: vesselId as string,
-        },
+    let where: Prisma.PinsWhereInput = {
+      locationDiagram: {
+        vesselId: vesselId as string,
       },
+    };
+
+    if (search) {
+      where.AND = [
+        {
+          OR: [
+            {
+              subLocation: {
+                name: {
+                  contains: search as string,
+                },
+              },
+            },
+          ],
+        },
+      ];
+    }
+
+    const pins = await prisma.pins.paginate<Pins>({
+      page: Number(page),
+      limit: Number(limit),
+      offset,
+      where,
       include: {
         inventory: true,
         PinImages: true,

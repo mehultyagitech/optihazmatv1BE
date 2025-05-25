@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import crypto from 'node:crypto';
-import { basename } from 'path';
 import prisma from '../database/Prisma';
 import { convertPDFToImages } from '../utils/pdfToImage';
 import {
