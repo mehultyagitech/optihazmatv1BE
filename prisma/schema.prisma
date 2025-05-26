@@ -293,3 +293,27 @@ model PinImages {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model SubLocations {
+  id                  String   @id @default(uuid())
+  subLocationName     String
+  status              Boolean  @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Compartments {
+  id                  String   @id @default(uuid())
+  compartmentName     String
+  status              Boolean  @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Equipments {
+  id                  String   @id @default(uuid())
+  equipmentName       String
+  status              Boolean  @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
