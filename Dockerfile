@@ -18,9 +18,13 @@ RUN apt-get update && apt-get install -y \
     librsvg2-dev
 
 RUN npm install --production
-
+RUN npm install --save-dev @types/bcryptjs @types/morgan @types/multer @types/jsonwebtoken
 # Copy source code
 COPY . .
+
+
+# Run Prisma migrate before build
+RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
