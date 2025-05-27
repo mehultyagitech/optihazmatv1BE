@@ -163,7 +163,7 @@ model Vessel {
   socIssueDate           DateTime
   readyForMaintenance    Boolean             @default(false)
   maintenanceStartDate   DateTime
-  vesselEmailId          String
+  vesselEmailId          String?
   headerFreeTextCaption  String?
   headerFreeTextValue    String?
   poDataGapDisclaimer    String?
