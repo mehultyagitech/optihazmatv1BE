@@ -274,14 +274,6 @@ export const updatePin = async (req: Request, res: Response) => {
         },
       },
     });
-
-    type PinAttachmentType = {
-      id: string,
-      file: PinImages | PinAttachments,
-      url: string,
-      name: string,
-      status: "New" | "Uploaded",
-    }
     
     if (files && files.length) {
       for (const file of files as Express.Multer.File[]) {
@@ -322,25 +314,32 @@ export const updatePin = async (req: Request, res: Response) => {
             }
           })
         }
-
-        const deletedAttachments = JSON.parse(pinData.deletedAttachments || '[]') as PinAttachmentType[];
-        const deletedImages = JSON.parse(pinData.deletedImages || '[]') as PinAttachmentType[];
-
-        console.log('Deleted Attachments:', deletedAttachments);
-        console.log('Deleted Images:', deletedImages);
-
-        deletedAttachments.forEach(async (pinAttachment: PinAttachmentType) => {
-          await prisma.pinAttachments.delete({
-            where: { id: pinAttachment.file.id },
-          });
-        });
-
-        deletedImages.forEach(async (pinImage: PinAttachmentType) => {
-          await prisma.pinImages.delete({
-            where: { id: pinImage.file.id },
-          });
-        });
       }
+    }
+  
+    const { deletedAttachments, deletedImages } = pinData;
+
+    type PinAttachmentType = {
+      id: string,
+      file: PinImages | PinAttachments,
+      url: string,
+      name: string,
+      status: "New" | "Uploaded",
+    }
+
+    const attachmentsToDelete = !!deletedAttachments ? JSON.parse(deletedAttachments) as PinAttachmentType[] : [];
+    const imagesToDelete = !!deletedImages ? JSON.parse(deletedImages) as PinAttachmentType[] : [];
+
+    for (const pinAttachment of attachmentsToDelete) {
+      await prisma.pinAttachments.delete({
+        where: { id: pinAttachment.file.id },
+      });
+    }
+
+    for (const pinImage of imagesToDelete) {
+      await prisma.pinImages.delete({
+        where: { id: pinImage.file.id },
+      });
     }
   
     return res.status(200).json({
