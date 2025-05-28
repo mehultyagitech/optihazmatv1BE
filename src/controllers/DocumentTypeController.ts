@@ -11,9 +11,7 @@ export async function getAllDocumentTypes(req: Request, res: Response) {
     let where = {};
     if (!!search) {
       where = {
-        OR: [
-          { name: { contains: search as string } },
-        ],
+        OR: [{ name: { contains: search as string } }],
       };
     }
 
@@ -115,22 +113,25 @@ export async function getDocumentTypesImages(req: Request, res: Response) {
       where: {
         id: documentTypeId,
         VesselAttachments: {
-          some:{
+          some: {
             vesselId: vesselID,
-          }
-        }
+          },
+        },
       },
       select: {
         id: true,
         name: true,
         VesselAttachments: {
+          where: {
+            vesselId: vesselID,
+          },
           select: {
             id: true,
             vesselId: true,
             url: true,
             AttachmentImages: true,
-          }
-        }
+          },
+        },
       },
     });
 
