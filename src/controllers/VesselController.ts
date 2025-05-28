@@ -147,6 +147,9 @@ export const createVessel = async (req: Request, res: Response) => {
         [fieldname: string]: Express.Multer.File[];
       };
 
+      console.log('Number of attachments:', attachments.length);
+      console.log('Attachment names:', attachments.map(a => a.originalname));
+
       if (!!image) {
         await prisma.vesselImages.create({
           data: {
@@ -243,6 +246,9 @@ export const updateVessel = async (req: Request, res: Response) => {
       const { image, 'attachments[]': attachments } = req.files as {
         [fieldname: string]: Express.Multer.File[];
       };
+
+      console.log('Number of attachments:', attachments.length);
+      console.log('Attachment names:', attachments.map(a => a.originalname));
 
       if (!!image) {
         await prisma.vesselImages.deleteMany({
