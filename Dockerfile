@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN npm install --production
 RUN npm install --save-dev @types/bcryptjs @types/morgan @types/multer @types/jsonwebtoken
+
+RUN npm install -g pm2
+
 # Copy source code
 COPY . .
 
@@ -33,4 +36,5 @@ RUN npm run build
 EXPOSE 3000
 
 # Start the app
-CMD ["npm", "run", "start"]
+# CMD ["npm", "run", "start"]
+CMD ["pm2-runtime", "dist/index.js"]
