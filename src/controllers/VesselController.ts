@@ -181,6 +181,8 @@ export const createVessel = async (req: Request, res: Response) => {
             },
           });
 
+          console.log('Attachment created:', attachment, 'file:', file);
+
           // Convert PDF to images if the file is a PDF
           if (file.mimetype === 'application/pdf') {
             const imagesPaths = await convertPDFToImages(
@@ -188,9 +190,11 @@ export const createVessel = async (req: Request, res: Response) => {
               uniqueFolderName,
             );
 
+            console.log('Generated images paths:', imagesPaths);
+
             let counter = 1;
             for (const imagePath of imagesPaths) {
-              await prisma.attachmentImages.create({
+              const ai = await prisma.attachmentImages.create({
                 data: {
                   fileName:
                     file.originalname.split('.')[0] + `-page-${counter++}.png`,
@@ -198,6 +202,8 @@ export const createVessel = async (req: Request, res: Response) => {
                   attachmentId: attachment.id,
                 },
               });
+
+              console.log('Attachment image created:', ai);
             }
           }
         }
@@ -284,6 +290,8 @@ export const updateVessel = async (req: Request, res: Response) => {
             },
           });
 
+          console.log('Attachment created:', attachment, 'file:', file);
+
           // Convert PDF to images if the file is a PDF
           if (file.mimetype === 'application/pdf') {
             const imagesPaths = await convertPDFToImages(
@@ -291,10 +299,12 @@ export const updateVessel = async (req: Request, res: Response) => {
               uniqueFolderName,
             );
 
+            console.log('Generated images paths:', imagesPaths);
+
             // Save each generated image
             let imgCounter = 1;
             for (const imagePath of imagesPaths) {
-              await prisma.attachmentImages.create({
+              const ai = await prisma.attachmentImages.create({
                 data: {
                   fileName:
                     file.originalname.split('.')[0] + `-page-${imgCounter++}.`,
@@ -302,6 +312,8 @@ export const updateVessel = async (req: Request, res: Response) => {
                   attachmentId: attachment.id,
                 },
               });
+
+              console.log('Attachment image created:', ai);
             }
           }
         }
@@ -316,8 +328,6 @@ export const updateVessel = async (req: Request, res: Response) => {
       status: 'New' | 'Uploaded';
       url: string;
     };
-
-    console.log('deletedAttachments', deletedAttachments);
 
     const attachmentsToDelete = !!deletedAttachments ? JSON.parse(deletedAttachments) as VesselAttachmentType[] : [];
 
