@@ -216,17 +216,24 @@ export const createVessel = async (req: Request, res: Response) => {
 
 export const updateVessel = async (req: Request, res: Response) => {
   try {
-    const { attachmentDocType, ...vesselData } = req.body;
+    const { data: vesselDataStr } = req.body;
+    const { attachments: dAtt, deletedAttachments, ...vesselData } = JSON.parse(vesselDataStr);
 
-    if (vesselData.id !== req.params.id) {
-      const joiObject = vesselUpdateValidation(req.params.id);
-      const { hasError, errors } = await validateAsync(joiObject, vesselData);
+    vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
+    vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
 
-      if (hasError) {
-        throw new ApiException('Validation error', 422, errors);
-      }
+    if (vesselData.ihmSurveyEndDateIsSame) {
+      vesselData.ihmSurveyEndDate = vesselData.ihmSurveyStartDate;
+      delete vesselData.ihmSurveyEndDateIsSame;
     }
 
+    const joiObject = vesselUpdateValidation(req.params.id);
+    const { hasError, errors } = await validateAsync(joiObject, vesselData);
+    if (hasError) {
+      throw new ApiException('Validation error', 422, errors);
+    }
+
+    // Update the vessel
     const vessel = await prisma.vessel.update({
       where: { id: req.params.id },
       data: vesselData,
@@ -239,9 +246,7 @@ export const updateVessel = async (req: Request, res: Response) => {
 
       if (!!image) {
         await prisma.vesselImages.deleteMany({
-          where: {
-            vesselId: vessel.id,
-          },
+          where: { vesselId: vessel.id },
         });
 
         await prisma.vesselImages.create({
@@ -257,12 +262,19 @@ export const updateVessel = async (req: Request, res: Response) => {
         let counter = 0;
         const uniqueFolderName = crypto.randomBytes(16).toString('hex');
         for (const file of attachments) {
+          const { docType } = dAtt[counter++];
+          if (!docType) {
+            throw new ApiException(
+              'Document type is required for each attachment',
+              422,
+            );
+          }
           const attachment = await prisma.vesselAttachments.create({
             data: {
               fileName: file.originalname,
               url: file.filename,
               vesselId: vessel.id,
-              documentTypeId: attachmentDocType[counter++],
+              documentTypeId: docType,
             },
           });
 
@@ -274,12 +286,12 @@ export const updateVessel = async (req: Request, res: Response) => {
             );
 
             // Save each generated image
-            let counter = 1;
+            let imgCounter = 1;
             for (const imagePath of imagesPaths) {
               await prisma.attachmentImages.create({
                 data: {
                   fileName:
-                    file.originalname.split('.')[0] + `-page-${counter++}.`,
+                    file.originalname.split('.')[0] + `-page-${imgCounter++}.`,
                   url: imagePath,
                   attachmentId: attachment.id,
                 },
@@ -289,8 +301,30 @@ export const updateVessel = async (req: Request, res: Response) => {
         }
       }
     }
+  
+    type VesselAttachmentType = {
+      id: string;
+      name: string;
+      filename: string;
+      docType: string;
+      status: 'New' | 'Uploaded';
+      url: string;
+    };
 
-    res.json(vessel);
+    console.log('deletedAttachments', deletedAttachments);
+
+    const attachmentsToDelete = !!deletedAttachments ? JSON.parse(deletedAttachments) as VesselAttachmentType[] : [];
+
+    for (const attachment of attachmentsToDelete) {
+      await prisma.vesselAttachments.delete({
+        where: { id: attachment.id },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: vessel,
+    });
   } catch (error) {
     if (error instanceof ApiException) {
       return res.status(error.status).json({
