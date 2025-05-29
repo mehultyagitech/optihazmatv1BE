@@ -6,7 +6,6 @@ import logger from 'morgan';
 import cors, { CorsOptions } from 'cors';
 import helmet from 'helmet';
 import CookieParser from 'cookie-parser';
-import path from 'path';
 import multer from 'multer';
 import UserRoutes from './routes/UserRoutes';
 import AuthRoutes from './routes/AuthRoutes';
@@ -25,6 +24,9 @@ import LocationDiagramRoutes from './routes/LocationDiagramRoutes';
 dotenv.config();
 
 const app = express();
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 2);
+}
 app.use(CookieParser());
 
 const corsOptions: CorsOptions = {
