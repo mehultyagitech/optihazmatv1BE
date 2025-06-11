@@ -253,9 +253,6 @@ export const updateVessel = async (req: Request, res: Response) => {
         [fieldname: string]: Express.Multer.File[];
       };
 
-      console.log('Number of attachments:', attachments.length);
-      console.log('Attachment names:', attachments.map(a => a.originalname));
-
       if (!!image) {
         await prisma.vesselImages.deleteMany({
           where: { vesselId: vessel.id },
