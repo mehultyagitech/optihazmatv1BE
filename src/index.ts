@@ -20,6 +20,7 @@ import CompartmentRoutes from './routes/CompartmentRoutes';
 import DocumentTypeRoutes from './routes/DocumentTypeRoutes';
 import InventoryRoutes from './routes/InventoryRoutes';
 import LocationDiagramRoutes from './routes/LocationDiagramRoutes';
+import DashboardRoutes from './routes/DashboardRoutes';
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ app.use(CookieParser());
 
 const corsOptions: CorsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
+  credentials: true, 
 };
 
 app.use(cors(corsOptions));
@@ -62,6 +63,7 @@ app.use('/api/document-types', DocumentTypeRoutes);
 app.use('/api/inventory', InventoryRoutes);
 app.use('/api/generics', GenericRoutes);
 app.use('/api/location-diagrams', LocationDiagramRoutes);
+app.use('/api/getAllDashboardData', DashboardRoutes);
 
 // Multer error handling middleware
 const multerErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
