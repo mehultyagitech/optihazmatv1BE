@@ -66,6 +66,12 @@ export type LocationDiagramOrderBy = Prisma.LocationDiagramOrderByWithRelationIn
 export type LocationDiagramInclude = Prisma.LocationDiagramInclude;
 export type LocationDiagramSelect = Prisma.LocationDiagramSelect;
 
+// ClientManager interfaces
+export type ClientManagerWhere = Prisma.ClientManagerWhereInput;
+export type ClientManagerOrderBy = Prisma.ClientManagerOrderByWithRelationInput;
+export type ClientManagerInclude = Prisma.ClientManagerInclude;
+export type ClientManagerSelect = Prisma.ClientManagerSelect;
+
 // Generic types for backward compatibility
 export type where = 
   | VesselWhere 
@@ -78,7 +84,8 @@ export type where =
   | InventoryWhere
   | UserWhere
   | PinWhere
-  | LocationDiagramWhere;
+  | LocationDiagramWhere
+  | ClientManagerWhere;
 
 export type orderBy = 
   | VesselOrderBy 
@@ -91,7 +98,8 @@ export type orderBy =
   | InventoryOrderBy
   | UserOrderBy
   | PinOrderBy
-  | LocationDiagramOrderBy;
+  | LocationDiagramOrderBy
+  | ClientManagerOrderBy;
 
 export type include = 
   | VesselInclude 
@@ -104,7 +112,8 @@ export type include =
   | InventoryInclude
   | UserInclude
   | PinInclude
-  | LocationDiagramInclude;
+  | LocationDiagramInclude
+  | ClientManagerInclude;
 
 export type select = 
   | VesselSelect 
@@ -117,7 +126,8 @@ export type select =
   | InventorySelect
   | UserSelect
   | PinSelect
-  | LocationDiagramSelect;
+  | LocationDiagramSelect
+  | ClientManagerSelect;
 
 export type findManyArgs = {
   skip?: number;

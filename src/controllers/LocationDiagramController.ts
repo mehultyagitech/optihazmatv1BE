@@ -64,8 +64,8 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
         vessel: {
           select: {
             id: true,
-            clientName: true,
-            clientManager: true,
+            Client: true,
+            Manager: true,
             imoNumber: true,
             vesselType: true,
           }
@@ -187,8 +187,8 @@ export async function getLocationDiagramById(req: Request, res: Response) {
         vessel: {
           select: {
             id: true,
-            clientName: true,
-            clientManager: true,
+            Client: true,
+            Manager: true,
             imoNumber: true,
             vesselType: true,
           }

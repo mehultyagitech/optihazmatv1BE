@@ -5,7 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -128,15 +129,17 @@ model LoginLog {
 }
 
 model ClientManager {
-  id             Int      @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   companyName    String
   address        String?
   contactDetails String?
   verifaviaId    String
-  isClient       Boolean  @default(true) // true for Client, false for Manager
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  Vessel         Vessel[]
+  isClient       Boolean         @default(true) // true for Client, false for Manager
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ClientVessels  Vessel[]        @relation("Client")
+  ManagedVessels Vessel[]        @relation("Manager")
+  VesselHistory  VesselHistory[]
 }
 
 model Vessel {
@@ -151,8 +154,8 @@ model Vessel {
   lbd                    String // L*B*D
   registeredOwner        String
   registeredOwnerAddress String
-  vesselManager          String
-  clientName             String
+  clientName             Int
+  vesselManager          Int
   deliveryDate           DateTime
   keelLaidDate           DateTime
   shipYardName           String
@@ -163,6 +166,7 @@ model Vessel {
   socIssueDate           DateTime
   readyForMaintenance    Boolean             @default(false)
   maintenanceStartDate   DateTime
+  discontinued           Boolean             @default(false)
   vesselEmailId          String?
   headerFreeTextCaption  String?
   headerFreeTextValue    String?
@@ -170,8 +174,6 @@ model Vessel {
   commonReferenceNo      String?
   documentTypeId         String?
   documentType           DocumentType?       @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
-  clientId               Int?
-  clientManager          ClientManager?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdBy              String?
   user                   User?               @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   createdAt              DateTime            @default(now())
@@ -179,6 +181,22 @@ model Vessel {
   VesselAttachments      VesselAttachments[]
   VesselImages           VesselImages[]
   LocationDiagram        LocationDiagram[]
+  Client                 ClientManager       @relation("Client", fields: [clientName], references: [id], onDelete: Cascade)
+  Manager                ClientManager       @relation("Manager", fields: [vesselManager], references: [id], onDelete: Cascade)
+  VesselHistory          VesselHistory[]
+}
+
+model VesselHistory {
+  id                  String        @id @default(uuid())
+  entryDate           DateTime      @default(now())
+  activeDate          DateTime?     @default(now())
+  discontinuedDate    DateTime?
+  activeRemarks       String?
+  discontinuedRemarks String?
+  clientName          Int
+  client              ClientManager @relation(fields: [clientName], references: [id], onDelete: Cascade)
+  vesselId            String
+  vessel              Vessel        @relation(fields: [vesselId], references: [id], onDelete: Cascade)
 }
 
 model VesselAttachments {
@@ -295,25 +313,25 @@ model PinImages {
 }
 
 model SubLocations {
-  id                  String   @id @default(uuid())
-  subLocationName     String
-  status              Boolean  @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id              String   @id @default(uuid())
+  subLocationName String
+  status          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Compartments {
-  id                  String   @id @default(uuid())
-  compartmentName     String
-  status              Boolean  @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id              String   @id @default(uuid())
+  compartmentName String
+  status          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Equipments {
-  id                  String   @id @default(uuid())
-  equipmentName       String
-  status              Boolean  @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id            String   @id @default(uuid())
+  equipmentName String
+  status        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

@@ -21,8 +21,20 @@ export const getAllVessels = async (req: Request, res: Response) => {
         OR: [
           { vesselName: { contains: search as string } },
           { imoNumber: { contains: search as string } },
-          { classSociety: { contains: search as string } },
-          { clientName: { contains: search as string } },
+          {
+            Manager: {
+              companyName: {
+                contains: search as string,
+              },
+            },
+          },
+          {
+            Client: {
+              companyName: {
+                contains: search as string,
+              },
+            },
+          }
         ],
       };
     }
@@ -37,7 +49,8 @@ export const getAllVessels = async (req: Request, res: Response) => {
         id: true,
         imoNumber: true,
         clientName: true,
-        clientManager: true,
+        Client: true,
+        Manager: true,
         vesselType: true,
         vesselName: true,
         vesselManager: true,
@@ -97,6 +110,7 @@ export const getVesselById = async (req: Request, res: Response) => {
             AttachmentImages: true,
           },
         },
+        VesselHistory: true,
       },
     });
     if (!vessel) return res.status(404).json({ error: 'Vessel not found' });
@@ -117,7 +131,7 @@ export const createVessel = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
     const { data: vesselDataStr } = req.body;
-    const { attachments: dAtt, ...vesselData } = JSON.parse(vesselDataStr);
+    const { attachments: dAtt, discontinueRemarks, ...vesselData } = JSON.parse(vesselDataStr);
 
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
@@ -135,7 +149,6 @@ export const createVessel = async (req: Request, res: Response) => {
     }
 
     vesselData.createdBy = user.id;
-    vesselData.clientId = user.clientId ?? null;
 
     // Create the vessel
     const vessel = await prisma.vessel.create({
@@ -148,7 +161,10 @@ export const createVessel = async (req: Request, res: Response) => {
       };
 
       console.log('Number of attachments:', attachments.length);
-      console.log('Attachment names:', attachments.map(a => a.originalname));
+      console.log(
+        'Attachment names:',
+        attachments.map((a) => a.originalname),
+      );
 
       if (!!image) {
         await prisma.vesselImages.create({
@@ -210,6 +226,20 @@ export const createVessel = async (req: Request, res: Response) => {
       }
     }
 
+    if (!!discontinueRemarks) {
+      await prisma.vesselHistory.create({
+        data: {
+          vesselId: vessel.id,
+          clientName: vessel.clientName,
+          activeDate: !vesselData.discontinued ? new Date() : null,
+          activeRemarks: !vesselData.discontinued ? discontinueRemarks ?? 'New Vessel Created' : '',
+          discontinuedDate: vesselData.discontinued ? new Date() : null,
+          discontinuedRemarks: vesselData.discontinued ? discontinueRemarks : '',
+          entryDate: new Date(),
+        }
+      })
+    }
+
     res.status(201).json(vessel);
   } catch (error) {
     if (error instanceof ApiException) {
@@ -226,7 +256,14 @@ export const createVessel = async (req: Request, res: Response) => {
 export const updateVessel = async (req: Request, res: Response) => {
   try {
     const { data: vesselDataStr } = req.body;
-    const { attachments: dAtt, deletedAttachments, ...vesselData } = JSON.parse(vesselDataStr);
+    const {
+      attachments: dAtt,
+      deletedAttachments, 
+      discontinueRemarks,
+      clientName: clientId,
+      vesselManager: vesselManagerId,
+      ...vesselData
+    } = JSON.parse(vesselDataStr);
 
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
@@ -245,7 +282,11 @@ export const updateVessel = async (req: Request, res: Response) => {
     // Update the vessel
     const vessel = await prisma.vessel.update({
       where: { id: req.params.id },
-      data: vesselData,
+      data: {
+        ...vesselData,
+        Client: { connect: { id: clientId } },
+        Manager: { connect: { id: vesselManagerId } },
+      },
     });
 
     if (!!req.files) {
@@ -316,7 +357,7 @@ export const updateVessel = async (req: Request, res: Response) => {
         }
       }
     }
-  
+
     type VesselAttachmentType = {
       id: string;
       name: string;
@@ -326,11 +367,27 @@ export const updateVessel = async (req: Request, res: Response) => {
       url: string;
     };
 
-    const attachmentsToDelete = !!deletedAttachments ? JSON.parse(deletedAttachments) as VesselAttachmentType[] : [];
+    const attachmentsToDelete = !!deletedAttachments
+      ? (JSON.parse(deletedAttachments) as VesselAttachmentType[])
+      : [];
 
     for (const attachment of attachmentsToDelete) {
       await prisma.vesselAttachments.delete({
         where: { id: attachment.id },
+      });
+    }
+
+    if (!!discontinueRemarks) {
+      await prisma.vesselHistory.create({
+        data: {
+          vesselId: vessel.id,
+          clientName: vessel.clientName,
+          activeDate: !vesselData.discontinued ? new Date() : null,
+          activeRemarks: !vesselData.discontinued ? discontinueRemarks : '',
+          discontinuedDate: vesselData.discontinued ? new Date() : null,
+          discontinuedRemarks: vesselData.discontinued ? discontinueRemarks : '',
+          entryDate: new Date(),
+        },
       });
     }
 

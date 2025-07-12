@@ -101,6 +101,18 @@ export default async function getGenericData(req: Request, res: Response) {
       },
     });
 
+    const Clients = await prisma.clientManager.findMany({
+      where: {
+        isClient: true,
+      }
+    });
+
+    const Managers = await prisma.clientManager.findMany({
+      where: {
+        isClient: false,
+      }
+    });
+
     res.status(200).json({
       success: true,
       message: 'Data retrieved successfully',
@@ -112,6 +124,8 @@ export default async function getGenericData(req: Request, res: Response) {
         SubLocations,
         Objects,
         Inventory,
+        Clients,
+        Managers,
       },
     });
   } catch (error) {
