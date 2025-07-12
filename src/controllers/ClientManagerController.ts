@@ -154,3 +154,51 @@ export async function getSubLocation(req: Request, res: Response) {
     throw error;
   }
 }
+
+/**
+ * Delete (or soft-delete) an existing Client/Manager
+ */
+export async function deleteClientManager(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const clientId = parseInt(id);
+    if (isNaN(clientId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID" });
+    }
+
+    const existingClientManager = await prisma.clientManager.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!existingClientManager) {
+      return res.status(404).json({
+        success: false,
+        message: "Client/Manager not found",
+      });
+    }
+
+    // Hard delete (remove from DB)
+    await prisma.clientManager.delete({
+      where: { id: clientId },
+    });
+
+    // If you want to soft delete instead, use:
+    // await prisma.clientManager.update({
+    //   where: { id: clientId },
+    //   data: { isDeleted: true } // assuming your schema has `isDeleted`
+    // });
+
+    return res.status(200).json({
+      success: true,
+      message: "Client/Manager deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting Client/Manager:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An unexpected error occurred",
+    });
+  }
+}
+
