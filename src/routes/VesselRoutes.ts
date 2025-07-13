@@ -5,6 +5,7 @@ import {
   createVessel,
   updateVessel,
   deleteVessel,
+  makeCommonInventoryImage,
 } from '../controllers/VesselController';
 import upload from '../middlewares/Multer';
 import Authenticate from '../middlewares/Authenticate';
@@ -34,6 +35,14 @@ router.put(
   Authenticate,
   updateVessel,
 );
+
+router.post(
+  '/common-inventory-image/:vesselId',
+  uploadFiles,
+  Authenticate,
+  makeCommonInventoryImage,
+);
+
 router.delete('/:id', Authenticate, deleteVessel);
 
 export default router;

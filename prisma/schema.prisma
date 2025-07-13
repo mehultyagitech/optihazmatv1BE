@@ -143,9 +143,9 @@ model ClientManager {
 }
 
 model Vessel {
-  id                     String              @id @default(uuid())
+  id                     String                 @id @default(uuid())
   vesselName             String
-  imoNumber              String              @unique
+  imoNumber              String                 @unique
   vesselType             String
   flag                   String
   classSociety           String
@@ -164,26 +164,38 @@ model Vessel {
   ihmSurveyStartDate     DateTime
   ihmSurveyEndDate       DateTime
   socIssueDate           DateTime
-  readyForMaintenance    Boolean             @default(false)
+  readyForMaintenance    Boolean                @default(false)
   maintenanceStartDate   DateTime
-  discontinued           Boolean             @default(false)
+  discontinued           Boolean                @default(false)
   vesselEmailId          String?
   headerFreeTextCaption  String?
   headerFreeTextValue    String?
   poDataGapDisclaimer    String?
   commonReferenceNo      String?
   documentTypeId         String?
-  documentType           DocumentType?       @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  documentType           DocumentType?          @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
   createdBy              String?
-  user                   User?               @relation(fields: [createdBy], references: [id], onDelete: SetNull)
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  user                   User?                  @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   VesselAttachments      VesselAttachments[]
   VesselImages           VesselImages[]
   LocationDiagram        LocationDiagram[]
-  Client                 ClientManager       @relation("Client", fields: [clientName], references: [id], onDelete: Cascade)
-  Manager                ClientManager       @relation("Manager", fields: [vesselManager], references: [id], onDelete: Cascade)
+  Client                 ClientManager          @relation("Client", fields: [clientName], references: [id], onDelete: Cascade)
+  Manager                ClientManager          @relation("Manager", fields: [vesselManager], references: [id], onDelete: Cascade)
   VesselHistory          VesselHistory[]
+  VesselInventoryImage   VesselInventoryImage[]
+}
+
+model VesselInventoryImage {
+  id        String   @id @default(uuid())
+  fileName  String
+  url       String
+  isMain    Boolean  @default(false)
+  vesselId  String
+  vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VesselHistory {

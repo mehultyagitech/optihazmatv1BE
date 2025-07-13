@@ -34,7 +34,7 @@ export const getAllVessels = async (req: Request, res: Response) => {
                 contains: search as string,
               },
             },
-          }
+          },
         ],
       };
     }
@@ -111,6 +111,7 @@ export const getVesselById = async (req: Request, res: Response) => {
           },
         },
         VesselHistory: true,
+        VesselInventoryImage: true,
       },
     });
     if (!vessel) return res.status(404).json({ error: 'Vessel not found' });
@@ -131,7 +132,11 @@ export const createVessel = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
     const { data: vesselDataStr } = req.body;
-    const { attachments: dAtt, discontinueRemarks, ...vesselData } = JSON.parse(vesselDataStr);
+    const {
+      attachments: dAtt,
+      discontinueRemarks,
+      ...vesselData
+    } = JSON.parse(vesselDataStr);
 
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
@@ -156,21 +161,29 @@ export const createVessel = async (req: Request, res: Response) => {
     });
 
     if (!!req.files) {
-      const { image, 'attachments[]': attachments } = req.files as {
+      const {
+        image,
+        'attachments[]': attachments,
+        commonInventoryImage,
+      } = req.files as {
         [fieldname: string]: Express.Multer.File[];
       };
-
-      console.log('Number of attachments:', attachments.length);
-      console.log(
-        'Attachment names:',
-        attachments.map((a) => a.originalname),
-      );
 
       if (!!image) {
         await prisma.vesselImages.create({
           data: {
             fileName: image[0].originalname,
             url: image[0].filename,
+            vesselId: vessel.id,
+          },
+        });
+      }
+
+      if (!!commonInventoryImage) {
+        await prisma.vesselInventoryImage.create({
+          data: {
+            fileName: commonInventoryImage[0].originalname,
+            url: commonInventoryImage[0].filename,
             vesselId: vessel.id,
           },
         });
@@ -232,12 +245,16 @@ export const createVessel = async (req: Request, res: Response) => {
           vesselId: vessel.id,
           clientName: vessel.clientName,
           activeDate: !vesselData.discontinued ? new Date() : null,
-          activeRemarks: !vesselData.discontinued ? discontinueRemarks ?? 'New Vessel Created' : '',
+          activeRemarks: !vesselData.discontinued
+            ? (discontinueRemarks ?? 'New Vessel Created')
+            : '',
           discontinuedDate: vesselData.discontinued ? new Date() : null,
-          discontinuedRemarks: vesselData.discontinued ? discontinueRemarks : '',
+          discontinuedRemarks: vesselData.discontinued
+            ? discontinueRemarks
+            : '',
           entryDate: new Date(),
-        }
-      })
+        },
+      });
     }
 
     res.status(201).json(vessel);
@@ -253,12 +270,50 @@ export const createVessel = async (req: Request, res: Response) => {
   }
 };
 
+export const makeCommonInventoryImage = async (req: Request, res: Response) => {
+  try {
+    const { vesselId } = req.params;
+
+    const { isMain } = req.body;
+
+    const { commonInventoryImage } = req.files as {
+      [fieldname: string]: Express.Multer.File[];
+    };
+
+    if (!!commonInventoryImage && commonInventoryImage.length > 0) {
+      await prisma.vesselInventoryImage.deleteMany({
+        where: { vesselId },
+      });
+
+      await prisma.vesselInventoryImage.create({
+        data: {
+          fileName: commonInventoryImage[0].originalname,
+          url: commonInventoryImage[0].filename,
+          vesselId,
+        },
+      });
+    }
+
+    await prisma.vesselInventoryImage.updateMany({
+      where: { vesselId },
+      data: { isMain: !!isMain },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Common inventory image updated successfully',
+    });
+  } catch (error) {
+    throw new ApiException('Error updating common inventory image', 500, error);
+  }
+};
+
 export const updateVessel = async (req: Request, res: Response) => {
   try {
     const { data: vesselDataStr } = req.body;
     const {
       attachments: dAtt,
-      deletedAttachments, 
+      deletedAttachments,
       discontinueRemarks,
       clientName: clientId,
       vesselManager: vesselManagerId,
@@ -290,7 +345,11 @@ export const updateVessel = async (req: Request, res: Response) => {
     });
 
     if (!!req.files) {
-      const { image, 'attachments[]': attachments } = req.files as {
+      const {
+        image,
+        'attachments[]': attachments,
+        commonInventoryImage,
+      } = req.files as {
         [fieldname: string]: Express.Multer.File[];
       };
 
@@ -303,6 +362,20 @@ export const updateVessel = async (req: Request, res: Response) => {
           data: {
             fileName: image[0].originalname,
             url: image[0].filename,
+            vesselId: vessel.id,
+          },
+        });
+      }
+
+      if (!!commonInventoryImage) {
+        await prisma.vesselInventoryImage.deleteMany({
+          where: { vesselId: vessel.id },
+        });
+
+        await prisma.vesselInventoryImage.create({
+          data: {
+            fileName: commonInventoryImage[0].originalname,
+            url: commonInventoryImage[0].filename,
             vesselId: vessel.id,
           },
         });
@@ -385,7 +458,9 @@ export const updateVessel = async (req: Request, res: Response) => {
           activeDate: !vesselData.discontinued ? new Date() : null,
           activeRemarks: !vesselData.discontinued ? discontinueRemarks : '',
           discontinuedDate: vesselData.discontinued ? new Date() : null,
-          discontinuedRemarks: vesselData.discontinued ? discontinueRemarks : '',
+          discontinuedRemarks: vesselData.discontinued
+            ? discontinueRemarks
+            : '',
           entryDate: new Date(),
         },
       });
