@@ -46,7 +46,7 @@ export const getAllPins = async (req: Request, res: Response) => {
         PinImages: true,
         locationDiagram: true,
         subLocation: true,
-      }
+      },
     });
 
     return res.json({
@@ -70,16 +70,47 @@ export const getPinById = async (req: Request, res: Response) => {
   try {
     const pin = await prisma.pins.findUnique({
       where: { id: req.params.id },
-      include:{
+      include: {
         PinAttachments: true,
         PinImages: true,
-      }
+        locationDiagram: true,
+      },
     });
     if (!pin) return res.status(404).json({ error: 'Pin not found' });
+
+    const vesselId = pin.locationDiagram.vesselId;
+
+    const PinAttachments = await prisma.pinAttachments.findMany({
+      where: {
+        pin: {
+          is: {
+            locationDiagram: {
+              is: { vesselId },
+            },
+          },
+        },
+      },
+    });
+
+    const PinAttachmentLinkPivots = await prisma.pinAttachmentPivotLinks.findMany({
+      where: {
+        pinId: pin.id,
+      },
+    });
+
+    const PinAttachmentLink: Record<string, boolean> = {};
+    PinAttachmentLinkPivots.forEach((pivot) => {
+      PinAttachmentLink[pivot.attachmentId] = true;
+    });
+
     res.json({
       success: true,
       message: 'Pin retrieved successfully',
-      data: pin,
+      data: {
+        ...pin,
+        PinAttachments,
+        PinAttachmentLink,
+      },
     });
   } catch (error) {
     if (error instanceof ApiException) {
@@ -159,15 +190,17 @@ export const createPin = async (req: Request, res: Response) => {
               url: file.filename,
               pin: {
                 connect: {
-                  id: pin.id, 
+                  id: pin.id,
                 },
               },
-            }
+            },
           });
         }
         if (type == 'attachments') {
           // field name = attachments[0].file
-          const attachmentIndex = !!file.fieldname ? file.fieldname.match(/\d+/) : '';
+          const attachmentIndex = !!file.fieldname
+            ? file.fieldname.match(/\d+/)
+            : '';
           const index = attachmentIndex ? parseInt(attachmentIndex[0]) : 0;
 
           await prisma.pinAttachments.create({
@@ -181,11 +214,11 @@ export const createPin = async (req: Request, res: Response) => {
               },
               pin: {
                 connect: {
-                  id: pin.id, 
+                  id: pin.id,
                 },
               },
-            }
-          })
+            },
+          });
         }
       }
     }
@@ -274,7 +307,7 @@ export const updatePin = async (req: Request, res: Response) => {
         },
       },
     });
-    
+
     if (files && files.length) {
       for (const file of files as Express.Multer.File[]) {
         const [type, _] = file.fieldname.split('[');
@@ -285,16 +318,18 @@ export const updatePin = async (req: Request, res: Response) => {
               url: file.filename,
               pin: {
                 connect: {
-                  id: updatedPin.id, 
+                  id: updatedPin.id,
                 },
               },
-            }
+            },
           });
         }
 
         if (type == 'attachments') {
           // field name = attachments[0].file
-          const attachmentIndex = !!file.fieldname ? file.fieldname.match(/\d+/) : '';
+          const attachmentIndex = !!file.fieldname
+            ? file.fieldname.match(/\d+/)
+            : '';
           const index = attachmentIndex ? parseInt(attachmentIndex[0]) : 0;
 
           await prisma.pinAttachments.create({
@@ -308,27 +343,31 @@ export const updatePin = async (req: Request, res: Response) => {
               },
               pin: {
                 connect: {
-                  id: updatedPin.id, 
+                  id: updatedPin.id,
                 },
               },
-            }
-          })
+            },
+          });
         }
       }
     }
-  
+
     const { deletedAttachments, deletedImages } = pinData;
 
     type PinAttachmentType = {
-      id: string,
-      file: PinImages | PinAttachments,
-      url: string,
-      name: string,
-      status: "New" | "Uploaded",
-    }
+      id: string;
+      file: PinImages | PinAttachments;
+      url: string;
+      name: string;
+      status: 'New' | 'Uploaded';
+    };
 
-    const attachmentsToDelete = !!deletedAttachments ? JSON.parse(deletedAttachments) as PinAttachmentType[] : [];
-    const imagesToDelete = !!deletedImages ? JSON.parse(deletedImages) as PinAttachmentType[] : [];
+    const attachmentsToDelete = !!deletedAttachments
+      ? (JSON.parse(deletedAttachments) as PinAttachmentType[])
+      : [];
+    const imagesToDelete = !!deletedImages
+      ? (JSON.parse(deletedImages) as PinAttachmentType[])
+      : [];
 
     for (const pinAttachment of attachmentsToDelete) {
       await prisma.pinAttachments.delete({
@@ -341,7 +380,7 @@ export const updatePin = async (req: Request, res: Response) => {
         where: { id: pinImage.file.id },
       });
     }
-  
+
     return res.status(200).json({
       success: true,
       message: 'Pin updated successfully',
@@ -360,6 +399,47 @@ export const updatePin = async (req: Request, res: Response) => {
     throw error;
   }
 };
+
+export const pinAttachmentLink = async (req: Request, res: Response) => {
+  try {
+    const { pinId, attachmentId, linked } = req.body;
+
+    if (!pinId || !attachmentId) {
+      throw new ApiException('Pin ID and Attachment ID are required', 400);
+    }
+
+    const pinAttachmentLink = await prisma.pinAttachmentPivotLinks.deleteMany({
+      where: {
+        pinId,
+        attachmentId,
+      },
+    });
+
+    if (!!linked) {
+      await prisma.pinAttachmentPivotLinks.create({
+        data: {
+          pinId,
+          attachmentId,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Pin attachment link updated successfully',
+      data: pinAttachmentLink,
+    });    
+  } catch (error) {
+    if (error instanceof ApiException) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+        data: error.data,
+      });
+    }
+    throw error;
+  }
+}
 
 export const deletePin = async (req: Request, res: Response) => {
   try {

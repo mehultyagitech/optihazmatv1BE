@@ -29,27 +29,30 @@ model Location {
 }
 
 model Hazmat {
-  id         Int      @id @default(autoincrement())
-  name       String   @unique
-  isDisabled Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              Int               @id @default(autoincrement())
+  name            String            @unique
+  isDisabled      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  InventoryHazmat InventoryHazmat[]
 }
 
 model Unit {
-  id         String   @id @default(uuid())
-  name       String   @unique
-  isDisabled Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String            @id @default(uuid())
+  name            String            @unique
+  isDisabled      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  InventoryHazmat InventoryHazmat[]
 }
 
 model ResultType {
-  id         String   @id @default(uuid())
-  name       String   @unique
-  isDisabled Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String            @id @default(uuid())
+  name            String            @unique
+  isDisabled      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  InventoryHazmat InventoryHazmat[]
 }
 
 model SubLocation {
@@ -101,12 +104,29 @@ model DocumentType {
 }
 
 model Inventory {
-  id         String   @id @default(uuid())
-  name       String   @unique
-  isDisabled Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  Pins       Pins[]
+  id              String            @id @default(uuid())
+  name            String            @unique
+  isDisabled      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  Pins            Pins[]
+  InventoryHazmat InventoryHazmat[]
+}
+
+model InventoryHazmat {
+  id           Int        @id @default(autoincrement())
+  totalMass    Float
+  remarks      String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  hazmatId     Int
+  hazmat       Hazmat     @relation(fields: [hazmatId], references: [id], onDelete: Cascade)
+  unitId       String
+  unit         Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  resultTypeId String
+  resultType   ResultType @relation(fields: [resultTypeId], references: [id], onDelete: Cascade)
+  inventoryId  String
+  inventory    Inventory  @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -298,44 +318,54 @@ model LocationDiagramImage {
 }
 
 model Pins {
-  id                String           @id @default(uuid())
-  x                 Float
-  y                 Float
-  locationDiagramId String
-  locationDiagram   LocationDiagram  @relation(fields: [locationDiagramId], references: [id], onDelete: Cascade)
-  subLocationId     String
-  subLocation       SubLocation      @relation(fields: [subLocationId], references: [id], onDelete: Cascade)
-  equipmentId       String
-  equipment         Equipment        @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  compartmentId     String
-  compartment       Compartment      @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
-  ObjectId          String
-  object            Objects          @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
-  inventoryId       String
-  inventory         Inventory        @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
-  Description       String
-  isPCHM            Boolean          @default(false)
-  manufacturerBrand String
-  referenceNo       String
-  remarks           String
-  userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  PinAttachments    PinAttachments[]
-  PinImages         PinImages[]
+  id                      String                    @id @default(uuid())
+  x                       Float
+  y                       Float
+  locationDiagramId       String
+  locationDiagram         LocationDiagram           @relation(fields: [locationDiagramId], references: [id], onDelete: Cascade)
+  subLocationId           String
+  subLocation             SubLocation               @relation(fields: [subLocationId], references: [id], onDelete: Cascade)
+  equipmentId             String
+  equipment               Equipment                 @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  compartmentId           String
+  compartment             Compartment               @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
+  ObjectId                String
+  object                  Objects                   @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
+  inventoryId             String
+  inventory               Inventory                 @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  Description             String
+  isPCHM                  Boolean                   @default(false)
+  manufacturerBrand       String
+  referenceNo             String
+  remarks                 String
+  userId                  String
+  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  PinAttachments          PinAttachments[]
+  PinImages               PinImages[]
+  PinAttachmentPivotLinks PinAttachmentPivotLinks[]
 }
 
 model PinAttachments {
-  id             String       @id @default(uuid())
-  fileName       String
-  url            String
-  documentTypeId String
-  documentType   DocumentType @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
-  pinId          String
-  pin            Pins         @relation(fields: [pinId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                      String                    @id @default(uuid())
+  fileName                String
+  url                     String
+  documentTypeId          String
+  documentType            DocumentType              @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  pinId                   String
+  pin                     Pins                      @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  PinAttachmentPivotLinks PinAttachmentPivotLinks[]
+}
+
+model PinAttachmentPivotLinks {
+  id           Int            @id @default(autoincrement())
+  pinId        String
+  pin          Pins           @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   PinAttachments @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
 }
 
 model PinImages {

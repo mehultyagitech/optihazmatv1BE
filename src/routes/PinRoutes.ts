@@ -5,6 +5,7 @@ import {
   createPin,
   updatePin,
   deletePin,
+  pinAttachmentLink,
 } from '../controllers/PinController';
 import upload from '../middlewares/Multer';
 import Authenticate from '../middlewares/Authenticate';
@@ -16,6 +17,7 @@ router.get('/list/:vesselId', Authenticate, Paginate, getAllPins);
 router.get('/:id', Authenticate, getPinById);
 router.post('/', Authenticate, upload.any(), createPin);
 router.put('/:id', Authenticate, upload.any(), updatePin);
+router.post('/link-attachments', Authenticate, pinAttachmentLink);
 router.delete('/:id', Authenticate, deletePin);
 
 export default router;
