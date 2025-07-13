@@ -27,6 +27,11 @@ export async function getAllInventory(req: Request, res: Response) {
         id: true,
         name: true,
         isDisabled: true,
+        vessel: {
+          select: {
+            VesselInventoryImage: true,
+          }
+        }
       },
     });
 
