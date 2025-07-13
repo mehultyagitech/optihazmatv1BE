@@ -203,6 +203,34 @@ async function main() {
     });
   }
 
+  const Units = [
+    'Kg',
+    'Ton',
+    'Litre',
+  ];
+
+  for (const unit of Units) {
+    await prisma.unit.upsert({
+      where: { name: unit },
+      update: {},
+      create: { name: unit },
+    });
+  }
+
+  const ResultTypes = [
+    'PCHM',
+    'Documented',
+    'Visual'
+  ];
+
+  for (const type of ResultTypes) {
+    await prisma.resultType.upsert({
+      where: { name: type },
+      update: {},
+      create: { name: type },
+    });
+  }
+
   console.log('Seeding completed successfully!');
 }
 

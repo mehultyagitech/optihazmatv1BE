@@ -127,6 +127,34 @@ export default async function getGenericData(req: Request, res: Response) {
       },
     });
 
+    const Units = await prisma.unit.findMany({
+      where: {
+        isDisabled: false,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+      select: {
+        id: true,
+        name: true,
+        isDisabled: true,
+      },
+    });
+
+    const ResultTypes = await prisma.resultType.findMany({
+      where: {
+        isDisabled: false,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+      select: {
+        id: true,
+        name: true,
+        isDisabled: true,
+      },
+    });
+
     res.status(200).json({
       success: true,
       message: 'Data retrieved successfully',
@@ -141,6 +169,8 @@ export default async function getGenericData(req: Request, res: Response) {
         Clients,
         Managers,
         Hazmats,
+        Units,
+        ResultTypes,
       },
     });
   } catch (error) {

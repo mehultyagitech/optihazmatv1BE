@@ -36,6 +36,22 @@ model Hazmat {
   updatedAt  DateTime @updatedAt
 }
 
+model Unit {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  isDisabled Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ResultType {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  isDisabled Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 model SubLocation {
   id              String            @id @default(uuid())
   name            String            @unique
