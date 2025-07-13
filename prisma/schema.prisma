@@ -29,30 +29,30 @@ model Location {
 }
 
 model Hazmat {
-  id              Int               @id @default(autoincrement())
-  name            String            @unique
-  isDisabled      Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  InventoryHazmat InventoryHazmat[]
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  isDisabled Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  PinHazmat  PinHazmat[]
 }
 
 model Unit {
-  id              String            @id @default(uuid())
-  name            String            @unique
-  isDisabled      Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  InventoryHazmat InventoryHazmat[]
+  id         String      @id @default(uuid())
+  name       String      @unique
+  isDisabled Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  PinHazmat  PinHazmat[]
 }
 
 model ResultType {
-  id              String            @id @default(uuid())
-  name            String            @unique
-  isDisabled      Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  InventoryHazmat InventoryHazmat[]
+  id         String      @id @default(uuid())
+  name       String      @unique
+  isDisabled Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  PinHazmat  PinHazmat[]
 }
 
 model SubLocation {
@@ -104,29 +104,29 @@ model DocumentType {
 }
 
 model Inventory {
-  id              String            @id @default(uuid())
-  name            String            @unique
-  isDisabled      Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  Pins            Pins[]
-  InventoryHazmat InventoryHazmat[]
+  id         String   @id @default(uuid())
+  name       String   @unique
+  isDisabled Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  Pins       Pins[]
 }
 
-model InventoryHazmat {
-  id           Int        @id @default(autoincrement())
-  totalMass    Float
-  remarks      String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  hazmatId     Int
-  hazmat       Hazmat     @relation(fields: [hazmatId], references: [id], onDelete: Cascade)
-  unitId       String
-  unit         Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  resultTypeId String
-  resultType   ResultType @relation(fields: [resultTypeId], references: [id], onDelete: Cascade)
-  inventoryId  String
-  inventory    Inventory  @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+model PinHazmat {
+  id            Int        @id @default(autoincrement())
+  totalMass     Float      @default(0)
+  hazInventMass Float      @default(0)
+  remarks       String?
+  hazmatId      Int
+  hazmat        Hazmat     @relation(fields: [hazmatId], references: [id], onDelete: Cascade)
+  unitId        String
+  unit          Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  resultTypeId  String
+  resultType    ResultType @relation(fields: [resultTypeId], references: [id], onDelete: Cascade)
+  pinId         String
+  pin           Pins       @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model User {
@@ -338,6 +338,12 @@ model Pins {
   manufacturerBrand       String
   referenceNo             String
   remarks                 String
+  isRemovedFromIHM        Boolean                   @default(false)
+  isReplaced              Boolean                   @default(false)
+  removedDate             DateTime?
+  removedRemarks          String?
+  useCommonImage          Boolean                   @default(false)
+  saveWithoutImage        Boolean                   @default(false)
   userId                  String
   user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt               DateTime                  @default(now())
@@ -345,6 +351,7 @@ model Pins {
   PinAttachments          PinAttachments[]
   PinImages               PinImages[]
   PinAttachmentPivotLinks PinAttachmentPivotLinks[]
+  PinHazmat               PinHazmat[]
 }
 
 model PinAttachments {

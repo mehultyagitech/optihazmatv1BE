@@ -74,6 +74,7 @@ export const getPinById = async (req: Request, res: Response) => {
         PinAttachments: true,
         PinImages: true,
         locationDiagram: true,
+        PinHazmat: true,
       },
     });
     if (!pin) return res.status(404).json({ error: 'Pin not found' });
@@ -92,11 +93,12 @@ export const getPinById = async (req: Request, res: Response) => {
       },
     });
 
-    const PinAttachmentLinkPivots = await prisma.pinAttachmentPivotLinks.findMany({
-      where: {
-        pinId: pin.id,
-      },
-    });
+    const PinAttachmentLinkPivots =
+      await prisma.pinAttachmentPivotLinks.findMany({
+        where: {
+          pinId: pin.id,
+        },
+      });
 
     const PinAttachmentLink: Record<string, boolean> = {};
     PinAttachmentLinkPivots.forEach((pivot) => {
@@ -127,11 +129,10 @@ export const getPinById = async (req: Request, res: Response) => {
 export const createPin = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
-    const pinData = JSON.parse(JSON.stringify(req.body));
+    const body = JSON.parse(JSON.stringify(req.body));
+    const { hazmats: hazmatData, ...pinData } = body;
+    const hazmats = hazmatData ? JSON.parse(hazmatData) : [];
     const files = req.files;
-
-    console.log('Data:', pinData);
-    console.log('Files:', files);
 
     const pin = await prisma.pins.create({
       data: {
@@ -177,6 +178,17 @@ export const createPin = async (req: Request, res: Response) => {
             id: user.id,
           },
         },
+        isRemovedFromIHM: pinData.isRemovedFromIHM === 'true',
+        isReplaced: pinData.isReplaced === 'true',
+        removedDate:
+          pinData.isRemovedFromIHM === 'true' && pinData.removedDate
+            ? new Date(pinData.removedDate)
+            : null,
+        removedRemarks:
+          (pinData.isRemovedFromIHM === 'true' && pinData.removedRemarks) ||
+          null,
+        useCommonImage: pinData.useCommonImage === 'true',
+        saveWithoutImage: pinData.saveWithoutImage === 'true',
       },
     });
 
@@ -223,6 +235,17 @@ export const createPin = async (req: Request, res: Response) => {
       }
     }
 
+    if (pin.id && hazmats && hazmats.length) {
+      for (const hazmat of hazmats) {
+        await prisma.pinHazmat.create({
+          data: {
+            ...hazmat,
+            pinId: pin.id,
+          },
+        });
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Pin created successfully',
@@ -246,11 +269,10 @@ export const updatePin = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
     const { id } = req.params;
-    const pinData = JSON.parse(JSON.stringify(req.body));
+    const body = JSON.parse(JSON.stringify(req.body));
+    const { hazmats: hazmatData, ...pinData } = body;
+    const hazmats = hazmatData ? JSON.parse(hazmatData) : [];
     const files = req.files;
-
-    console.log('Data:', pinData);
-    console.log('Files:', files);
 
     const existingPin = await prisma.pins.findUnique({
       where: { id },
@@ -305,8 +327,29 @@ export const updatePin = async (req: Request, res: Response) => {
             id: user.id,
           },
         },
+        isRemovedFromIHM: pinData.isRemovedFromIHM === 'true',
+        isReplaced: pinData.isReplaced === 'true',
+        removedDate:
+          pinData.isRemovedFromIHM === 'true' && pinData.removedDate
+            ? new Date(pinData.removedDate)
+            : null,
+        removedRemarks:
+          (pinData.isRemovedFromIHM === 'true' && pinData.removedRemarks) ||
+          null,
+        useCommonImage: pinData.useCommonImage === 'true',
+        saveWithoutImage: pinData.saveWithoutImage === 'true',
       },
     });
+
+    if (hazmats && hazmats.length) {
+      await prisma.pinHazmat.deleteMany({
+        where: { pinId: id },
+      });
+
+      await prisma.pinHazmat.createMany({
+        data: hazmats.map((h: any,i: number) => ({...h, totalMass: parseFloat(h.totalMass)})),
+      });
+    }
 
     if (files && files.length) {
       for (const file of files as Express.Multer.File[]) {
@@ -428,7 +471,7 @@ export const pinAttachmentLink = async (req: Request, res: Response) => {
       success: true,
       message: 'Pin attachment link updated successfully',
       data: pinAttachmentLink,
-    });    
+    });
   } catch (error) {
     if (error instanceof ApiException) {
       return res.status(error.status).json({
@@ -439,7 +482,7 @@ export const pinAttachmentLink = async (req: Request, res: Response) => {
     }
     throw error;
   }
-}
+};
 
 export const deletePin = async (req: Request, res: Response) => {
   try {
