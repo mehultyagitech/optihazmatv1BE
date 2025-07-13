@@ -113,7 +113,7 @@ export default async function getGenericData(req: Request, res: Response) {
       }
     });
 
-    const Hazmat = await prisma.hazmat.findMany({
+    const Hazmats = await prisma.hazmat.findMany({
       where: {
         isDisabled: false,
       },
@@ -140,7 +140,7 @@ export default async function getGenericData(req: Request, res: Response) {
         Inventory,
         Clients,
         Managers,
-        Hazmat,
+        Hazmats,
       },
     });
   } catch (error) {
