@@ -38,7 +38,7 @@ async function main() {
     'C-Deck',
     'Engine Control Room',
     'Fore Part',
-    'Nav Bridge Deck Plan'
+    'Nav Bridge Deck Plan',
   ];
 
   // Create default locations
@@ -59,8 +59,8 @@ async function main() {
     'Fire Station',
     'Galley',
     'Life Boat',
-    'Main Air Reservoir',	
-    "Master's Day Room"
+    'Main Air Reservoir',
+    "Master's Day Room",
   ];
 
   for (const name of subLocationNames) {
@@ -77,7 +77,7 @@ async function main() {
     'CENTRIFUGAL PUMP (x1 piece/1)',
     'FUEL GAS SUPPLY SYSTEM FOR ME-GI ENGINE (x1 piece/1) [MITSUBISHI SHIPBUILDING CO., LTD. : MSB-FGSS-0008]',
     'GEAR PUMP (x1 piece/1)',
-    'HYDROPHORE TANK UNIT (x1 piece/1)'
+    'HYDROPHORE TANK UNIT (x1 piece/1)',
   ];
 
   // Create default equipment
@@ -95,7 +95,7 @@ async function main() {
     'Floor Covering',
     'Gauge',
     'Lead solder',
-    'Actuator'
+    'Actuator',
   ];
 
   // Create default objects
@@ -114,7 +114,7 @@ async function main() {
     'Battery',
     'Bulkhead & deckhead',
     'Deck',
-    'Deck floor'
+    'Deck floor',
   ];
 
   for (const name of compartmentNames) {
@@ -131,7 +131,7 @@ async function main() {
     update: {},
     create: {
       name: 'Default Document Type',
-    }
+    },
   });
 
   const additionalDocumentTypes = [
@@ -139,7 +139,7 @@ async function main() {
     'Certificate',
     'Inspection Report',
     'Maintenance Log',
-    'Safety Protocol'
+    'Safety Protocol',
   ];
 
   for (const name of additionalDocumentTypes) {
@@ -156,7 +156,7 @@ async function main() {
     update: {},
     create: {
       name: 'Default Inventory',
-    }
+    },
   });
 
   const additionalInventories = [
@@ -164,11 +164,39 @@ async function main() {
     'Tools',
     'Safety Equipment',
     'Cleaning Supplies',
-    'Navigation Equipment'
+    'Navigation Equipment',
   ];
 
   for (const name of additionalInventories) {
     await prisma.inventory.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  const HazmatNames = [
+    'Asbestos',
+    'Polychlorinated biphenyls (PCBs)',
+    'Ozone Depleting Substance (ODS)',
+    'Anti-fouling systems containing organotin compounds as a biocide',
+    'Cybutryne',
+    'Perfluorooctane sulfonic acid (PFOS)',
+    'Cadmium and cadmium compounds',
+    'Hexavalent chromium and hexavalent chromium compounds',
+    'Lead and lead compounds',
+    'Mercury and mercury compounds',
+    'Polybrominated biphenyl (PBBs)',
+    'Polybrominated diphenyl ethers (PBDEs)',
+    'Polychloronaphthalenes (Cl >=3)',
+    'Radioactive substances',
+    'Certain shortchain chlorinated paraffins (CSCP)',
+    'Brominated flame retardant (HBCDD)',
+  ];
+
+  // Create default Hazmat items
+  for (const name of HazmatNames) {
+    await prisma.hazmat.upsert({
       where: { name },
       update: {},
       create: { name },

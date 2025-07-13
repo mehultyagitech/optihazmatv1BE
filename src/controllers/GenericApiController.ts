@@ -113,6 +113,20 @@ export default async function getGenericData(req: Request, res: Response) {
       }
     });
 
+    const Hazmat = await prisma.hazmat.findMany({
+      where: {
+        isDisabled: false,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+      select: {
+        id: true,
+        name: true,
+        isDisabled: true,
+      },
+    });
+
     res.status(200).json({
       success: true,
       message: 'Data retrieved successfully',
@@ -126,6 +140,7 @@ export default async function getGenericData(req: Request, res: Response) {
         Inventory,
         Clients,
         Managers,
+        Hazmat,
       },
     });
   } catch (error) {
