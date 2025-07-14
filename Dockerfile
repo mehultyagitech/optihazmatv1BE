@@ -39,7 +39,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-    
+
+RUN npm install --no-save --omit=peer ts-node
+
 # Generate Prisma client & compile TS → JS
 COPY prisma ./prisma
 RUN npx prisma generate
