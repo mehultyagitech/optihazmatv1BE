@@ -49,10 +49,19 @@ export const getAllPins = async (req: Request, res: Response) => {
       },
     });
 
+    const VesselInventoryImage = await prisma.vesselInventoryImage.findFirst({
+      where: {
+        vesselId: vesselId as string,
+      },
+    });
+
     return res.json({
       success: true,
       message: 'Pins retrieved successfully',
-      data: pins,
+      data: {
+        ...pins,
+        VesselInventoryImage
+      },
     });
   } catch (error) {
     if (error instanceof ApiException) {
