@@ -32,8 +32,9 @@ async function annotateDiagram(
     const fontSize = Math.round(r * 1.3);
     const markers = pins
       .map((p, i) => {
-        const cx = Math.round((p.x ?? 0) * W);
-        const cy = Math.round((p.y ?? 0) * H);
+        // Pin x/y are stored as percentages (0..100)
+        const cx = Math.round(((p.x ?? 0) / 100) * W);
+        const cy = Math.round(((p.y ?? 0) / 100) * H);
         return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#d32f2f" fill-opacity="0.9" stroke="#fff" stroke-width="2"/><text x="${cx}" y="${cy + fontSize / 3}" font-size="${fontSize}" fill="#fff" text-anchor="middle" font-family="Arial" font-weight="bold">${i + 1}</text>`;
       })
       .join('');
@@ -49,6 +50,13 @@ async function annotateDiagram(
   }
 }
 
+// Guard against fields saved as the literal strings "undefined"/"null".
+const clean = (v: unknown): string => {
+  const s = v === undefined || v === null ? '' : String(v);
+  const t = s.trim();
+  return t === 'undefined' || t === 'null' ? '' : s;
+};
+
 const initialsOf = (name?: string | null) =>
   (name || '')
     .split(' ')
@@ -62,10 +70,10 @@ const positionOf = (roles?: string) =>
   roles === 'ADMIN' ? 'IHM Manager' : 'User';
 
 const pinToRow = (pin: any, date?: string): InventoryRow => ({
-  pointNo: pin.referenceNo || undefined,
-  name: pin.Description || '-',
-  application: pin.object?.name || pin.equipment?.name || '-',
-  location: pin.subLocation?.name || '-',
+  pointNo: clean(pin.referenceNo) || undefined,
+  name: clean(pin.Description) || '-',
+  application: clean(pin.object?.name) || clean(pin.equipment?.name) || '-',
+  location: clean(pin.subLocation?.name) || '-',
   material:
     (pin.PinHazmat || [])
       .map((h: any) => h.hazmat?.name)
@@ -76,7 +84,7 @@ const pinToRow = (pin: any, date?: string): InventoryRow => ({
       .map((h: any) => `${h.totalMass ?? 0} ${h.unit?.name ?? ''}`.trim())
       .join(', ') || '-',
   date,
-  remarks: pin.remarks || '',
+  remarks: clean(pin.remarks),
 });
 
 export async function generateIHMReport(req: Request, res: Response) {
@@ -148,8 +156,8 @@ export async function generateIHMReport(req: Request, res: Response) {
         imageDataUri,
         points: (d.Pins as any[]).map((p, i) => ({
           no: i + 1,
-          description: p.Description || '-',
-          pointNo: p.referenceNo || undefined,
+          description: clean(p.Description) || '-',
+          pointNo: clean(p.referenceNo) || undefined,
         })),
       });
     }
