@@ -211,6 +211,7 @@ model Vessel {
   readyForMaintenance    Boolean                @default(false)
   maintenanceStartDate   DateTime
   discontinued           Boolean                @default(false)
+  callSign               String?
   vesselEmailId          String?
   headerFreeTextCaption  String?
   headerFreeTextValue    String?
@@ -229,6 +230,8 @@ model Vessel {
   Manager                ClientManager          @relation("Manager", fields: [vesselManager], references: [id], onDelete: Cascade)
   VesselHistory          VesselHistory[]
   VesselInventoryImage   VesselInventoryImage[]
+  PurchaseOrders         PurchaseOrder[]
+  IHMReports             IHMReport[]
 }
 
 model VesselInventoryImage {
@@ -342,6 +345,7 @@ model Pins {
   isReplaced              Boolean                   @default(false)
   removedDate             DateTime?
   removedRemarks          String?
+  installationDate        DateTime?
   useCommonImage          Boolean                   @default(false)
   saveWithoutImage        Boolean                   @default(false)
   userId                  String
@@ -407,4 +411,71 @@ model Equipments {
   status        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// ---- Purchase Orders (uploaded from the PO Excel; one PO has many items) ----
+
+model PurchaseOrder {
+  id              String    @id @default(uuid())
+  poNumber        String
+  shipName        String?
+  shipImo         String?
+  clientName      String?
+  supplier        String?
+  supplierEmail1  String?
+  supplierEmail2  String?
+  supplierEmail3  String?
+  supplierPhone1  String?
+  supplierPhone2  String?
+  orderDate       String?
+  orderRcvDate    String?
+  referenceNumber String?
+  emailType       String?
+  currencyCode    String?
+  docStatus       String    @default("not_started")
+  vesselId        String?
+  vessel          Vessel?   @relation(fields: [vesselId], references: [id], onDelete: SetNull)
+  items           PoItem[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([shipImo])
+  @@index([poNumber])
+}
+
+model PoItem {
+  id               String        @id @default(uuid())
+  poId             String
+  po               PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  product          String?
+  brand            String?
+  partDescription  String?
+  partExecution    String?
+  qtyRcv           String?
+  unit             String?
+  remarks          String?
+  itemDiscountPer  String?
+  priceUnit        String?
+  canContainHazmat String?       @default("NO")
+  createdAt        DateTime      @default(now())
+}
+
+// ---- Generated IHM Reports (history list on the Generate IHM page) ----
+
+model IHMReport {
+  id              String    @id @default(uuid())
+  vesselId        String
+  vessel          Vessel    @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  version         String
+  periodToDate    DateTime?
+  ihmReportNumber String?
+  fileName        String?
+  fileUrl         String?
+  approved        Boolean   @default(false)
+  disabled        Boolean   @default(false)
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([vesselId])
 }

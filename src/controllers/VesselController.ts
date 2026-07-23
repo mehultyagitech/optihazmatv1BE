@@ -160,6 +160,14 @@ export const createVessel = async (req: Request, res: Response) => {
       data: vesselData,
     });
 
+    // Back-link any purchase orders uploaded before this vessel existed.
+    if (vessel.imoNumber) {
+      await prisma.purchaseOrder.updateMany({
+        where: { shipImo: vessel.imoNumber, vesselId: null },
+        data: { vesselId: vessel.id },
+      });
+    }
+
     if (!!req.files) {
       const {
         image,
@@ -343,6 +351,14 @@ export const updateVessel = async (req: Request, res: Response) => {
         Manager: { connect: { id: vesselManagerId } },
       },
     });
+
+    // Keep purchase-order links in sync with the vessel's IMO number.
+    if (vessel.imoNumber) {
+      await prisma.purchaseOrder.updateMany({
+        where: { shipImo: vessel.imoNumber, vesselId: null },
+        data: { vesselId: vessel.id },
+      });
+    }
 
     if (!!req.files) {
       const {

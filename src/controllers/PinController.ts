@@ -197,6 +197,7 @@ export const createPin = async (req: Request, res: Response) => {
           (pinData.isRemovedFromIHM === 'true' && pinData.removedRemarks) ||
           null,
         useCommonImage: pinData.useCommonImage === 'true',
+        installationDate: pinData.installationDate ? new Date(pinData.installationDate) : null,
         saveWithoutImage: pinData.saveWithoutImage === 'true',
       },
     });
@@ -346,6 +347,7 @@ export const updatePin = async (req: Request, res: Response) => {
           (pinData.isRemovedFromIHM === 'true' && pinData.removedRemarks) ||
           null,
         useCommonImage: pinData.useCommonImage === 'true',
+        installationDate: pinData.installationDate ? new Date(pinData.installationDate) : null,
         saveWithoutImage: pinData.saveWithoutImage === 'true',
       },
     });

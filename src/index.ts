@@ -21,6 +21,8 @@ import DocumentTypeRoutes from './routes/DocumentTypeRoutes';
 import InventoryRoutes from './routes/InventoryRoutes';
 import LocationDiagramRoutes from './routes/LocationDiagramRoutes';
 import DashboardRoutes from './routes/DashboardRoutes';
+import PurchaseOrderRoutes from './routes/PurchaseOrderRoutes';
+import IHMReportRoutes from './routes/IHMReportRoutes';
 
 dotenv.config();
 
@@ -64,6 +66,8 @@ app.use('/api/inventory', InventoryRoutes);
 app.use('/api/generics', GenericRoutes);
 app.use('/api/location-diagrams', LocationDiagramRoutes);
 app.use('/api/getAllDashboardData', DashboardRoutes);
+app.use('/api/purchase-orders', PurchaseOrderRoutes);
+app.use('/api', IHMReportRoutes);
 
 // Multer error handling middleware
 const multerErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
