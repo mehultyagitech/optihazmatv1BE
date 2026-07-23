@@ -8,7 +8,7 @@ const FORBIDDEN_MESSAGE = 'Access Denied';
 export default function HasRole(...roles: Role[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = req.body.user as User | undefined;
+      const user = res.locals.user as User | undefined;
       if (!user) {
         throw new ApiException(UNAUTHORIZED_MESSAGE, 401);
       }
