@@ -3,6 +3,40 @@ import { LocationDiagram, Prisma } from '@prisma/client';
 import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
 
+/**
+ * Answer the request instead of rethrowing. A rethrow from an async handler
+ * is invisible to Express 4, so it became an unhandled rejection and took the
+ * whole API process down -- every "Image is required" click returned a 502
+ * while the container restarted.
+ */
+const handleLocationDiagramError = (
+  res: Response,
+  error: unknown,
+  action: string,
+) => {
+  if (error instanceof ApiException) {
+    return res.status(error.status).json({
+      success: false,
+      message: error.message,
+      data: error.data,
+    });
+  }
+
+  console.error(`Failed to ${action} location diagram:`, error);
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return res.status(422).json({
+      success: false,
+      message: `Could not ${action} the location diagram. Please check the details and try again.`,
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: `Something went wrong while trying to ${action} the location diagram.`,
+  });
+};
+
 export async function getAllLocationDiagrams(req: Request, res: Response) {
   try {
     const { vesselId } = req.params;
@@ -89,7 +123,7 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
       message: 'Location diagrams fetched successfully',
     });
   } catch (error) {
-    throw error;
+    return handleLocationDiagramError(res, error, 'list');
   }
 }
 
@@ -140,7 +174,7 @@ export async function createLocationDiagram(req: Request, res: Response) {
       }
     });
   } catch (error) {
-    throw error;
+    return handleLocationDiagramError(res, error, 'create');
   }
 }
 
@@ -215,6 +249,6 @@ export async function getLocationDiagramById(req: Request, res: Response) {
       message: 'Location diagram fetched successfully',
     });
   } catch (error) {
-    throw error;
+    return handleLocationDiagramError(res, error, 'load');
   }
 }
