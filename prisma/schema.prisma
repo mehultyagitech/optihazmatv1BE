@@ -207,7 +207,7 @@ model Vessel {
   ihmClass               String
   ihmSurveyStartDate     DateTime
   ihmSurveyEndDate       DateTime
-  socIssueDate           DateTime
+  socIssueDate           DateTime?
   readyForMaintenance    Boolean                @default(false)
   maintenanceStartDate   DateTime
   discontinued           Boolean                @default(false)

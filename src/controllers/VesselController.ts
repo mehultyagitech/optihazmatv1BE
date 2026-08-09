@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import crypto from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import prisma from '../database/Prisma';
 import { convertPDFToImages } from '../utils/pdfToImage';
 import {
@@ -8,6 +9,43 @@ import {
 } from '../validations/VesselValidation';
 import ApiException from '../errors/ApiException';
 import { validateAsync } from '../services/ValidationService';
+
+/**
+ * Answer a failed write instead of letting the rejection escape the async
+ * handler. Express 4 does not catch those, so a rethrow here becomes an
+ * unhandled rejection and Node kills the whole API process.
+ *
+ * Prisma rejects the query when a column the schema marks as required is
+ * missing or has the wrong type, which is a client mistake, not a server
+ * fault -- report it as 422 so the UI can show something useful.
+ */
+const handleVesselWriteError = (
+  res: Response,
+  error: unknown,
+  action: string,
+) => {
+  if (error instanceof ApiException) {
+    return res.status(error.status).json({
+      success: false,
+      message: error.message,
+      data: error.data,
+    });
+  }
+
+  console.error(`Failed to ${action} vessel:`, error);
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return res.status(422).json({
+      success: false,
+      message: `Could not ${action} the vessel. Please check that every required field is filled in.`,
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: `Something went wrong while trying to ${action} the vessel.`,
+  });
+};
 
 export const getAllVessels = async (req: Request, res: Response) => {
   try {
@@ -267,14 +305,7 @@ export const createVessel = async (req: Request, res: Response) => {
 
     res.status(201).json(vessel);
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handleVesselWriteError(res, error, 'create');
   }
 };
 
@@ -487,14 +518,7 @@ export const updateVessel = async (req: Request, res: Response) => {
       data: vessel,
     });
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handleVesselWriteError(res, error, 'update');
   }
 };
 
