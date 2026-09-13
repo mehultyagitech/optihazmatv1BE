@@ -32,9 +32,18 @@ if (process.env.NODE_ENV === 'production') {
 }
 app.use(CookieParser());
 
+// FRONTEND_URL may list several origins, comma-separated. The site answers on
+// both optihazmat.com and www.optihazmat.com while the bundle always calls
+// www, so a visitor on the apex domain makes cross-origin requests that a
+// single allowed origin rejects.
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const corsOptions: CorsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true, 
+  origin: allowedOrigins,
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
