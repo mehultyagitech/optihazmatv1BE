@@ -44,7 +44,13 @@ export const vesselDataValidation = Joi.object({
   headerFreeTextValue: Joi.string().max(40).optional(),
   poDataGapDisclaimer: Joi.string().max(500).optional(),
   commonReferenceNo: Joi.string().optional(),
-  callSign: Joi.string().allow('', null).optional(),
+  callSign: Joi.string()
+    .pattern(/^[A-Za-z0-9]+$/)
+    .required()
+    .messages({
+      'string.pattern.base':
+        'Call Sign/Distinctive Number must contain only letters and numbers',
+    }),
   createdBy: Joi.string().optional(),
   attachments: Joi.any().optional(),
   discontinued: Joi.boolean().optional(),
@@ -98,7 +104,13 @@ export const vesselUpdateValidation = (id: string) =>
     headerFreeTextValue: Joi.string().max(40).optional(),
     poDataGapDisclaimer: Joi.string().max(500).optional(),
     commonReferenceNo: Joi.string().optional(),
-  callSign: Joi.string().allow('', null).optional(),
+  callSign: Joi.string()
+    .pattern(/^[A-Za-z0-9]+$/)
+    .required()
+    .messages({
+      'string.pattern.base':
+        'Call Sign/Distinctive Number must contain only letters and numbers',
+    }),
     createdBy: Joi.string().optional(),
     deletedAttachments: Joi.any().optional(),
     discontinued: Joi.boolean().optional(),
