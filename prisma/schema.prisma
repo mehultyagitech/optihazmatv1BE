@@ -141,7 +141,8 @@ model User {
   updatedAt       DateTime          @updatedAt
   tokens          UserToken[]
   loginLogs       LoginLog[]
-  Vessel          Vessel[]
+  Vessel          Vessel[]          @relation("VesselCreatedBy")
+  UpdatedVessels  Vessel[]          @relation("VesselUpdatedBy")
   Pins            Pins[]
   LocationDiagram LocationDiagram[]
 }
@@ -209,7 +210,10 @@ model Vessel {
   ihmSurveyEndDate       DateTime
   socIssueDate           DateTime?
   readyForMaintenance    Boolean                @default(false)
+  // Required by validation; nullable so vessels saved before it existed load.
+  readyForMaintenanceDate DateTime?
   maintenanceStartDate   DateTime
+  showVesselToOwnerManager Boolean              @default(false)
   discontinued           Boolean                @default(false)
   callSign               String?
   vesselEmailId          String?
@@ -220,7 +224,10 @@ model Vessel {
   documentTypeId         String?
   documentType           DocumentType?          @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
   createdBy              String?
-  user                   User?                  @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  user                   User?                  @relation("VesselCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  // Set to the signed-in user on every create and update.
+  updatedBy              String?
+  updatedByUser          User?                  @relation("VesselUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
   VesselAttachments      VesselAttachments[]

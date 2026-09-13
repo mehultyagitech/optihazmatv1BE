@@ -35,7 +35,9 @@ export const vesselDataValidation = Joi.object({
   ihmSurveyEndDate: Joi.date().optional(),
   socIssueDate: Joi.date().optional(),
   readyForMaintenance: Joi.boolean().optional(),
+  readyForMaintenanceDate: Joi.date().required(),
   maintenanceStartDate: Joi.date().optional(),
+  showVesselToOwnerManager: Joi.boolean().optional(),
   vesselEmailId: Joi.string()
     .email({ tlds: { allow: false } })
     .optional()
@@ -95,7 +97,9 @@ export const vesselUpdateValidation = (id: string) =>
     ihmSurveyEndDate: Joi.date().optional(),
     socIssueDate: Joi.date().optional(),
     readyForMaintenance: Joi.boolean().optional(),
+    readyForMaintenanceDate: Joi.date().required(),
     maintenanceStartDate: Joi.date().optional(),
+    showVesselToOwnerManager: Joi.boolean().optional(),
     vesselEmailId: Joi.string()
       .email({ tlds: { allow: false } })
       .optional()

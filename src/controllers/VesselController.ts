@@ -142,6 +142,13 @@ export const getVesselById = async (req: Request, res: Response) => {
             email: true,
           },
         },
+        updatedByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         VesselImages: true,
         VesselAttachments: {
           include: {
@@ -192,6 +199,7 @@ export const createVessel = async (req: Request, res: Response) => {
     }
 
     vesselData.createdBy = user.id;
+    vesselData.updatedBy = user.id;
 
     // Create the vessel
     const vessel = await prisma.vessel.create({
@@ -380,6 +388,11 @@ export const updateVessel = async (req: Request, res: Response) => {
         ...vesselData,
         Client: { connect: { id: clientId } },
         Manager: { connect: { id: vesselManagerId } },
+        // Who saved it: set server-side, never taken from the payload. A
+        // relation connect rather than the raw updatedBy column, because this
+        // update already connects Client/Manager and Prisma rejects mixing
+        // the two input styles.
+        updatedByUser: { connect: { id: res.locals.user.id } },
       },
     });
 
