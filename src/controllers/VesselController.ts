@@ -255,9 +255,15 @@ export const createVessel = async (req: Request, res: Response) => {
       if (!!attachments && attachments.length > 0) {
         let counter = 0;
         const uniqueFolderName = crypto.randomBytes(16).toString('hex');
+        // dAtt lists every attachment in the form, already-uploaded ones
+        // included, so only the not-yet-uploaded entries line up (in order)
+        // with the files. Indexing dAtt directly gave a new file the Document
+        // Type of an existing attachment.
+        const newAttachmentMeta = (dAtt ?? []).filter(
+          (a: { status?: string }) => a.status !== 'Uploaded',
+        );
         for (const file of attachments) {
-          // for (const file of attachments) {
-          const { docType } = dAtt[counter++];
+          const { docType, useInReport } = newAttachmentMeta[counter++] ?? {};
           if (!docType) {
             throw new ApiException(
               'Document type is required for each attachment',
@@ -270,6 +276,7 @@ export const createVessel = async (req: Request, res: Response) => {
               url: file.filename,
               vesselId: vessel.id,
               documentTypeId: docType,
+              useInReport: !!useInReport,
             },
           });
 
@@ -460,8 +467,15 @@ export const updateVessel = async (req: Request, res: Response) => {
       if (!!attachments && attachments.length > 0) {
         let counter = 0;
         const uniqueFolderName = crypto.randomBytes(16).toString('hex');
+        // dAtt lists every attachment in the form, already-uploaded ones
+        // included, so only the not-yet-uploaded entries line up (in order)
+        // with the files. Indexing dAtt directly gave a new file the Document
+        // Type of an existing attachment.
+        const newAttachmentMeta = (dAtt ?? []).filter(
+          (a: { status?: string }) => a.status !== 'Uploaded',
+        );
         for (const file of attachments) {
-          const { docType } = dAtt[counter++];
+          const { docType, useInReport } = newAttachmentMeta[counter++] ?? {};
           if (!docType) {
             throw new ApiException(
               'Document type is required for each attachment',
@@ -474,6 +488,7 @@ export const updateVessel = async (req: Request, res: Response) => {
               url: file.filename,
               vesselId: vessel.id,
               documentTypeId: docType,
+              useInReport: !!useInReport,
             },
           });
 
@@ -515,6 +530,25 @@ export const updateVessel = async (req: Request, res: Response) => {
       status: 'New' | 'Uploaded';
       url: string;
     };
+
+    // Save edits to attachments that were already uploaded. Update used to
+    // only create new files and delete removed ones, so a changed Document
+    // Type or "Use in Report" on an existing attachment was silently dropped.
+    for (const a of (dAtt ?? []) as Array<{
+      id?: string;
+      status?: string;
+      docType?: string;
+      useInReport?: boolean;
+    }>) {
+      if (a.status !== 'Uploaded' || !a.id) continue;
+      await prisma.vesselAttachments.updateMany({
+        where: { id: a.id, vesselId: req.params.id },
+        data: {
+          useInReport: !!a.useInReport,
+          ...(a.docType ? { documentTypeId: a.docType } : {}),
+        },
+      });
+    }
 
     const attachmentsToDelete = !!deletedAttachments
       ? (JSON.parse(deletedAttachments) as VesselAttachmentType[])
