@@ -19,6 +19,33 @@ import { validateAsync } from '../services/ValidationService';
  * missing or has the wrong type, which is a client mistake, not a server
  * fault -- report it as 422 so the UI can show something useful.
  */
+// Form labels for Vessel columns, so a database-level "missing" error can
+// name the field the way the form does.
+const VESSEL_FIELD_LABELS: Record<string, string> = {
+  vesselName: 'Vessel Name',
+  imoNumber: 'IMO Number',
+  callSign: 'Call Sign/Distinctive Number',
+  vesselType: 'Vessel Type',
+  flag: 'Flag',
+  classSociety: 'Class Society',
+  portOfRegistry: 'Port of Registry',
+  grossTonnageMT: 'Gross Tonnage MT',
+  lbd: 'L*B*D',
+  registeredOwner: 'Registered Owner',
+  registeredOwnerAddress: 'Registered Owner Address',
+  vesselManager: 'Vessel Manager',
+  clientName: 'Client Name',
+  deliveryDate: 'Delivery Date',
+  keelLaidDate: 'Keel Laid Date',
+  shipYardName: 'Ship Yard Name',
+  shipYardAddress: 'Ship Yard Address',
+  ihmClass: 'IHM Class',
+  ihmSurveyStartDate: 'IHM Survey Start Date',
+  ihmSurveyEndDate: 'IHM Survey End Date',
+  readyForMaintenanceDate: 'Ready For Maintenance Date',
+  maintenanceStartDate: 'Maintenance Start Date',
+};
+
 const handleVesselWriteError = (
   res: Response,
   error: unknown,
@@ -35,6 +62,18 @@ const handleVesselWriteError = (
   console.error(`Failed to ${action} vessel:`, error);
 
   if (error instanceof Prisma.PrismaClientValidationError) {
+    // Name the column Prisma found missing ("Argument `shipYardAddress` is
+    // missing."). The generic message below sent users hunting through a
+    // form they believed was complete.
+    const missing = /Argument `(\w+)` is missing/.exec(error.message)?.[1];
+    if (missing) {
+      const label = VESSEL_FIELD_LABELS[missing] ?? missing;
+      return res.status(422).json({
+        success: false,
+        message: 'Validation error',
+        data: { [missing]: `${label} is required` },
+      });
+    }
     return res.status(422).json({
       success: false,
       message: `Could not ${action} the vessel. Please check that every required field is filled in.`,
