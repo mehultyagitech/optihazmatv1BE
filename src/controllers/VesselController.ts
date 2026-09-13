@@ -183,6 +183,15 @@ export const createVessel = async (req: Request, res: Response) => {
       ...vesselData
     } = JSON.parse(vesselDataStr);
 
+    // Remarks are pulled out before Joi runs, so enforce the rule here:
+    // mandatory only when the vessel is being saved as discontinued.
+    if (vesselData.discontinued && !String(discontinueRemarks ?? '').trim()) {
+      throw new ApiException('Validation error', 422, {
+        discontinueRemarks:
+          'Discontinue Remarks is required when the vessel is discontinued',
+      });
+    }
+
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
 
@@ -366,6 +375,13 @@ export const updateVessel = async (req: Request, res: Response) => {
       vesselManager: vesselManagerId,
       ...vesselData
     } = JSON.parse(vesselDataStr);
+
+    if (vesselData.discontinued && !String(discontinueRemarks ?? '').trim()) {
+      throw new ApiException('Validation error', 422, {
+        discontinueRemarks:
+          'Discontinue Remarks is required when the vessel is discontinued',
+      });
+    }
 
     vesselData.grossTonnageMT = Number(vesselData.grossTonnageMT);
     vesselData.readyForMaintenance = !!vesselData.readyForMaintenance;
