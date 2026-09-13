@@ -383,7 +383,22 @@ export const updateVessel = async (req: Request, res: Response) => {
       ...vesselData
     } = JSON.parse(vesselDataStr);
 
-    if (vesselData.discontinued && !String(discontinueRemarks ?? '').trim()) {
+    // Status before this save, so history records changes rather than
+    // every save that happens to carry remarks.
+    const previous = await prisma.vessel.findUnique({
+      where: { id: req.params.id },
+      select: { discontinued: true },
+    });
+    const wasDiscontinued = !!previous?.discontinued;
+
+    // Remarks are pulled out before Joi runs. They are mandatory only when
+    // the vessel is being discontinued now, not on every later edit of an
+    // already-discontinued vessel.
+    if (
+      vesselData.discontinued &&
+      !wasDiscontinued &&
+      !String(discontinueRemarks ?? '').trim()
+    ) {
       throw new ApiException('Validation error', 422, {
         discontinueRemarks:
           'Discontinue Remarks is required when the vessel is discontinued',
@@ -560,18 +575,21 @@ export const updateVessel = async (req: Request, res: Response) => {
       });
     }
 
-    if (!!discontinueRemarks) {
+    // One history row per status change. Unticking Discontinued writes an
+    // Active row (the remarks, or a default), ticking it writes a
+    // Discontinued row. A save that leaves the status as it was adds none.
+    const isDiscontinued = !!vessel.discontinued;
+    if (isDiscontinued !== wasDiscontinued) {
+      const remarks = String(discontinueRemarks ?? '').trim();
       await prisma.vesselHistory.create({
         data: {
           vesselId: vessel.id,
           clientName: vessel.clientName,
-          activeDate: !vesselData.discontinued ? new Date() : null,
-          activeRemarks: !vesselData.discontinued ? discontinueRemarks : '',
-          discontinuedDate: vesselData.discontinued ? new Date() : null,
-          discontinuedRemarks: vesselData.discontinued
-            ? discontinueRemarks
-            : '',
           entryDate: new Date(),
+          activeDate: isDiscontinued ? null : new Date(),
+          activeRemarks: isDiscontinued ? '' : remarks || 'Vessel marked active',
+          discontinuedDate: isDiscontinued ? new Date() : null,
+          discontinuedRemarks: isDiscontinued ? remarks : '',
         },
       });
     }
