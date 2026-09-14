@@ -3,6 +3,97 @@ import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
 import { PinAttachments, PinImages, Pins, Prisma } from '@prisma/client';
 
+type HazmatRow = {
+  hazmatId: number;
+  totalMass: number;
+  hazInventMass: number;
+  unitId: string;
+  resultTypeId: string;
+  remarks: string | null;
+};
+
+/**
+ * The form sends hazmat rows with the quantities as text ("12") and blank
+ * selections as "". Prisma rejects those (Float/Int expected), and that error
+ * used to crash the API after the pin itself was saved. Convert and check
+ * every row up front, before anything is written.
+ */
+const parseHazmatRows = (raw: unknown): HazmatRow[] => {
+  if (!raw) return [];
+  let rows: any[];
+  try {
+    rows = typeof raw === 'string' ? JSON.parse(raw) : (raw as any[]);
+  } catch {
+    throw new ApiException('Hazmat details could not be read', 422);
+  }
+  if (!Array.isArray(rows)) return [];
+
+  const toNumber = (value: unknown) => {
+    const n = Number(value);
+    return value === '' || value === null || value === undefined || Number.isNaN(n) ? 0 : n;
+  };
+
+  return rows.map((row, index) => {
+    const hazmatId = Number(row?.hazmatId);
+    const unitId = row?.unitId ? String(row.unitId) : '';
+    const resultTypeId = row?.resultTypeId ? String(row.resultTypeId) : '';
+    const missing = [
+      !Number.isInteger(hazmatId) || hazmatId <= 0 ? 'Hazmat' : null,
+      !unitId ? 'Unit' : null,
+      !resultTypeId ? 'Result Type' : null,
+    ].filter(Boolean);
+    if (missing.length) {
+      throw new ApiException(
+        `Hazmat row ${index + 1}: please select ${missing.join(', ')}`,
+        422,
+      );
+    }
+    return {
+      hazmatId,
+      totalMass: toNumber(row?.totalMass),
+      hazInventMass: toNumber(row?.hazInventMass),
+      unitId,
+      resultTypeId,
+      remarks: row?.remarks ? String(row.remarks) : null,
+    };
+  });
+};
+
+/**
+ * Answer a failed pin request instead of rethrowing. A rethrow from an async
+ * handler is an unhandled rejection that kills the API; nginx then returns a
+ * 502 without CORS headers, which the browser reports as a CORS error.
+ */
+const handlePinError = (res: Response, error: unknown, action: string) => {
+  if (error instanceof ApiException) {
+    return res.status(error.status).json({
+      success: false,
+      message: error.message,
+      data: error.data,
+    });
+  }
+
+  console.error(`Failed to ${action} inventory point:`, error);
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return res.status(422).json({
+      success: false,
+      message: `Could not ${action} the inventory point: some details are missing or in the wrong format.`,
+    });
+  }
+  if ((error as { code?: string })?.code === 'P2025') {
+    return res.status(422).json({
+      success: false,
+      message: `Could not ${action} the inventory point: a selected value no longer exists.`,
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: `Something went wrong while trying to ${action} the inventory point.`,
+  });
+};
+
 export const getAllPins = async (req: Request, res: Response) => {
   try {
     const { vesselId } = req.params;
@@ -64,14 +155,7 @@ export const getAllPins = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handlePinError(res, error, 'list');
   }
 };
 
@@ -124,14 +208,7 @@ export const getPinById = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handlePinError(res, error, 'load');
   }
 };
 
@@ -140,121 +217,130 @@ export const createPin = async (req: Request, res: Response) => {
     const { user } = res.locals;
     const body = JSON.parse(JSON.stringify(req.body));
     const { hazmats: hazmatData, ...pinData } = body;
-    const hazmats = hazmatData ? JSON.parse(hazmatData) : [];
+    const hazmats = parseHazmatRows(hazmatData);
     const files = req.files;
 
-    const pin = await prisma.pins.create({
-      data: {
-        x: parseFloat(pinData.x),
-        y: parseFloat(pinData.y),
-        locationDiagram: {
-          connect: {
-            id: pinData.locationDiagramId,
+    // All or nothing: a failure part-way (a bad hazmat row, a missing
+    // document type) must not leave a saved pin that a retry duplicates.
+    const pin = await prisma.$transaction(
+      async (tx) => {
+        const pin = await tx.pins.create({
+        data: {
+          x: parseFloat(pinData.x),
+          y: parseFloat(pinData.y),
+          locationDiagram: {
+            connect: {
+              id: pinData.locationDiagramId,
+            },
           },
-        },
-        subLocation: {
-          connect: {
-            id: pinData.subLocation,
+          subLocation: {
+            connect: {
+              id: pinData.subLocation,
+            },
           },
-        },
-        equipment: {
-          connect: {
-            id: pinData.equipment,
+          equipment: {
+            connect: {
+              id: pinData.equipment,
+            },
           },
-        },
-        compartment: {
-          connect: {
-            id: pinData.compartment,
+          compartment: {
+            connect: {
+              id: pinData.compartment,
+            },
           },
-        },
-        object: {
-          connect: {
-            id: pinData.object,
+          object: {
+            connect: {
+              id: pinData.object,
+            },
           },
-        },
-        inventory: {
-          connect: {
-            id: pinData.inventory,
+          inventory: {
+            connect: {
+              id: pinData.inventory,
+            },
           },
-        },
-        Description: pinData.description,
-        isPCHM: pinData.isPCHM === 'true',
-        manufacturerBrand: pinData.manufacturerBrand,
-        referenceNo: pinData.referenceNo,
-        remarks: pinData.remarks,
-        user: {
-          connect: {
-            id: user.id,
+          Description: pinData.description,
+          isPCHM: pinData.isPCHM === 'true',
+          manufacturerBrand: pinData.manufacturerBrand,
+          referenceNo: pinData.referenceNo,
+          remarks: pinData.remarks,
+          user: {
+            connect: {
+              id: user.id,
+            },
           },
+          isRemovedFromIHM: pinData.isRemovedFromIHM === 'true',
+          isReplaced: pinData.isReplaced === 'true',
+          removedDate:
+            pinData.isRemovedFromIHM === 'true' && pinData.removedDate
+              ? new Date(pinData.removedDate)
+              : null,
+          removedRemarks:
+            (pinData.isRemovedFromIHM === 'true' && pinData.removedRemarks) ||
+            null,
+          useCommonImage: pinData.useCommonImage === 'true',
+          installationDate: pinData.installationDate ? new Date(pinData.installationDate) : null,
+          saveWithoutImage: pinData.saveWithoutImage === 'true',
         },
-        isRemovedFromIHM: pinData.isRemovedFromIHM === 'true',
-        isReplaced: pinData.isReplaced === 'true',
-        removedDate:
-          pinData.isRemovedFromIHM === 'true' && pinData.removedDate
-            ? new Date(pinData.removedDate)
-            : null,
-        removedRemarks:
-          (pinData.isRemovedFromIHM === 'true' && pinData.removedRemarks) ||
-          null,
-        useCommonImage: pinData.useCommonImage === 'true',
-        installationDate: pinData.installationDate ? new Date(pinData.installationDate) : null,
-        saveWithoutImage: pinData.saveWithoutImage === 'true',
+      });
+
+      if (files && files.length) {
+        for (const file of files as Express.Multer.File[]) {
+          const [type, _] = file.fieldname.split('[');
+          if (type === 'images') {
+            await tx.pinImages.create({
+              data: {
+                fileName: file.filename,
+                url: file.filename,
+                pin: {
+                  connect: {
+                    id: pin.id,
+                  },
+                },
+              },
+            });
+          }
+          if (type == 'attachments') {
+            // field name = attachments[0].file
+            const attachmentIndex = !!file.fieldname
+              ? file.fieldname.match(/\d+/)
+              : '';
+            const index = attachmentIndex ? parseInt(attachmentIndex[0]) : 0;
+
+            await tx.pinAttachments.create({
+              data: {
+                fileName: file.originalname,
+                url: file.filename,
+                documentType: {
+                  connect: {
+                    id: pinData[`attachments[${index}].documentType`],
+                  },
+                },
+                pin: {
+                  connect: {
+                    id: pin.id,
+                  },
+                },
+              },
+            });
+          }
+        }
+      }
+
+      if (pin.id && hazmats && hazmats.length) {
+        for (const hazmat of hazmats) {
+          await tx.pinHazmat.create({
+            data: {
+              ...hazmat,
+              pinId: pin.id,
+            },
+          });
+        }
+      }
+
+        return pin;
       },
-    });
-
-    if (files && files.length) {
-      for (const file of files as Express.Multer.File[]) {
-        const [type, _] = file.fieldname.split('[');
-        if (type === 'images') {
-          await prisma.pinImages.create({
-            data: {
-              fileName: file.filename,
-              url: file.filename,
-              pin: {
-                connect: {
-                  id: pin.id,
-                },
-              },
-            },
-          });
-        }
-        if (type == 'attachments') {
-          // field name = attachments[0].file
-          const attachmentIndex = !!file.fieldname
-            ? file.fieldname.match(/\d+/)
-            : '';
-          const index = attachmentIndex ? parseInt(attachmentIndex[0]) : 0;
-
-          await prisma.pinAttachments.create({
-            data: {
-              fileName: file.originalname,
-              url: file.filename,
-              documentType: {
-                connect: {
-                  id: pinData[`attachments[${index}].documentType`],
-                },
-              },
-              pin: {
-                connect: {
-                  id: pin.id,
-                },
-              },
-            },
-          });
-        }
-      }
-    }
-
-    if (pin.id && hazmats && hazmats.length) {
-      for (const hazmat of hazmats) {
-        await prisma.pinHazmat.create({
-          data: {
-            ...hazmat,
-            pinId: pin.id,
-          },
-        });
-      }
-    }
+      { timeout: 30000 },
+    );
 
     res.status(201).json({
       success: true,
@@ -264,14 +350,7 @@ export const createPin = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handlePinError(res, error, 'create');
   }
 };
 
@@ -281,7 +360,7 @@ export const updatePin = async (req: Request, res: Response) => {
     const { id } = req.params;
     const body = JSON.parse(JSON.stringify(req.body));
     const { hazmats: hazmatData, ...pinData } = body;
-    const hazmats = hazmatData ? JSON.parse(hazmatData) : [];
+    const hazmats = parseHazmatRows(hazmatData);
     const files = req.files;
 
     const existingPin = await prisma.pins.findUnique({
@@ -358,7 +437,8 @@ export const updatePin = async (req: Request, res: Response) => {
       });
 
       await prisma.pinHazmat.createMany({
-        data: hazmats.map((h: any,i: number) => ({...h, totalMass: parseFloat(h.totalMass)})),
+        // Rows are already converted and checked by parseHazmatRows.
+        data: hazmats.map((h) => ({ ...h, pinId: id })),
       });
     }
 
@@ -443,14 +523,7 @@ export const updatePin = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handlePinError(res, error, 'update');
   }
 };
 
@@ -484,14 +557,7 @@ export const pinAttachmentLink = async (req: Request, res: Response) => {
       data: pinAttachmentLink,
     });
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handlePinError(res, error, 'link attachments for');
   }
 };
 
@@ -502,13 +568,6 @@ export const deletePin = async (req: Request, res: Response) => {
     });
     res.status(204).send();
   } catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-        data: error.data,
-      });
-    }
-    throw error;
+    return handlePinError(res, error, 'delete');
   }
 };
