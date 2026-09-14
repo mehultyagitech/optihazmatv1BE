@@ -20,7 +20,7 @@ export default function handleMasterDataError(res: Response, error: unknown, lab
     if (error.code === 'P2002') {
       return res.status(409).json({
         success: false,
-        message: `A ${label} with this name already exists`,
+        message: `${/^[aeiou]/i.test(label) ? 'An' : 'A'} ${label} with this name already exists`,
       });
     }
     if (error.code === 'P2025') {
