@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
+import handleMasterDataError from '../utils/masterDataError';
 
 export async function getAllCompartments(req: Request, res: Response) {
   try {
@@ -104,7 +105,7 @@ export async function updateCompartment(req: Request, res: Response) {
       data: compartment,
     });
   } catch (error) {
-    throw error;
+    return handleMasterDataError(res, error, 'compartment');
   }
 }
 

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
+import handleMasterDataError from '../utils/masterDataError';
 
 export async function getAllLocations(req: Request, res: Response) {
   try {
@@ -68,7 +69,7 @@ export async function createLocation(req: Request, res: Response) {
       data: location,
     });
   } catch (error) {
-    throw error;
+    return handleMasterDataError(res, error, 'location');
   }
 }
 
@@ -89,7 +90,7 @@ export async function updateLocation(req: Request, res: Response) {
       data: location,
     });
   } catch (error) {
-    throw error;
+    return handleMasterDataError(res, error, 'location');
   }
 }
 

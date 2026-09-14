@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
+import handleMasterDataError from '../utils/masterDataError';
 
 export async function getAllDocumentTypes(req: Request, res: Response) {
   try {
@@ -65,7 +66,7 @@ export async function createDocumentType(req: Request, res: Response) {
       message: 'Document type created successfully',
     });
   } catch (error) {
-    throw error;
+    return handleMasterDataError(res, error, 'document type');
   }
 }
 
@@ -86,7 +87,7 @@ export async function updateDocumentType(req: Request, res: Response) {
       message: 'Document type updated successfully',
     });
   } catch (error) {
-    throw error;
+    return handleMasterDataError(res, error, 'document type');
   }
 }
 
