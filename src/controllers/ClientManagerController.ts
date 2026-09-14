@@ -1,26 +1,48 @@
 import { Request, Response } from 'express';
 import ApiException from '../errors/ApiException';
 import prisma from '../database/Prisma';
+import { Prisma } from '@prisma/client';
+
+/**
+ * Answer a failed request instead of rethrowing: a rethrow from an async
+ * handler is an unhandled rejection that takes the whole API down.
+ */
+const handleClientManagerError = (res: Response, error: unknown) => {
+  if (error instanceof ApiException) {
+    return res.status(error.status).json({ success: false, message: error.message });
+  }
+  console.error('Client/Manager request failed:', error);
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return res.status(422).json({
+      success: false,
+      message: 'Some details are missing or in the wrong format.',
+    });
+  }
+  return res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+};
 
 /**
  * Get all Client/Managers
  */
 export async function getClientManagers(req: Request, res: Response) {
   try {
-    const clientManagers = await prisma.clientManager.findMany();
+    const clientManagers = await prisma.clientManager.findMany({
+      include: { _count: { select: { ClientVessels: true, ManagedVessels: true } } },
+      orderBy: { companyName: 'asc' },
+    });
+
+    // How many vessels each company is linked to, as client or as manager.
+    const data = clientManagers.map(({ _count, ...company }) => ({
+      ...company,
+      vesselCount: _count.ClientVessels + _count.ManagedVessels,
+    }));
 
     return res.status(200).json({
       success: true,
-      data: clientManagers,
+      data,
     });
-  }  catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    throw error;
+  } catch (error) {
+    return handleClientManagerError(res, error);
   }
 }
 
@@ -45,14 +67,8 @@ export async function getClientManager(req: Request, res: Response) {
       success: true,
       data: clientManager,
     });
-  }  catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    throw error;
+  } catch (error) {
+    return handleClientManagerError(res, error);
   }
 }
 
@@ -62,6 +78,10 @@ export async function getClientManager(req: Request, res: Response) {
 export async function createClientManager(req: Request, res: Response) {
   try {
     const { companyName, address, contactDetails, verifaviaId, isClient } = req.body;
+
+    if (!String(companyName ?? '').trim() || !String(verifaviaId ?? '').trim()) {
+      throw new ApiException('Company Name and OptiHazmat ID are required', 422);
+    }
 
     const newClientManager = await prisma.clientManager.create({
       data: {
@@ -77,14 +97,8 @@ export async function createClientManager(req: Request, res: Response) {
       success: true,
       data: newClientManager,
     });
-  }  catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    throw error;
+  } catch (error) {
+    return handleClientManagerError(res, error);
   }
 }
 
@@ -94,6 +108,10 @@ export async function createClientManager(req: Request, res: Response) {
 export async function updateClientManager(req: Request, res: Response) {
   try {
     const { id,companyName, address, contactDetails, verifaviaId, isClient } = req.body;
+
+    if (!String(companyName ?? '').trim() || !String(verifaviaId ?? '').trim()) {
+      throw new ApiException('Company Name and OptiHazmat ID are required', 422);
+    }
 
     const existingClientManager = await prisma.clientManager.findUnique({
       where: {
@@ -122,14 +140,8 @@ export async function updateClientManager(req: Request, res: Response) {
       success: true,
       data: updatedClientManager,
     });
-  }  catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    throw error;
+  } catch (error) {
+    return handleClientManagerError(res, error);
   }
 }
 
@@ -144,14 +156,8 @@ export async function getSubLocation(req: Request, res: Response) {
       success: true,
       data: clientManagers,
     });
-  }  catch (error) {
-    if (error instanceof ApiException) {
-      return res.status(error.status).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    throw error;
+  } catch (error) {
+    return handleClientManagerError(res, error);
   }
 }
 
@@ -175,6 +181,19 @@ export async function deleteClientManager(req: Request, res: Response) {
       return res.status(404).json({
         success: false,
         message: "Client/Manager not found",
+      });
+    }
+
+    // Vessels cascade-delete with their client/manager, so deleting a company
+    // that still has vessels would silently remove those vessels with their
+    // diagrams, inventory points and reports. Only unused companies go.
+    const linkedVessels = await prisma.vessel.count({
+      where: { OR: [{ clientName: clientId }, { vesselManager: clientId }] },
+    });
+    if (linkedVessels > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `${existingClientManager.companyName} is linked to ${linkedVessels} vessel${linkedVessels === 1 ? '' : 's'}. Assign ${linkedVessels === 1 ? 'it' : 'them'} to another client/manager before deleting.`,
       });
     }
 

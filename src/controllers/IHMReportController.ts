@@ -91,6 +91,12 @@ const pinToRow = (pin: any, date?: string): InventoryRow => ({
   remarks: clean(pin.remarks),
 });
 
+/** Answer a failed report request instead of rethrowing (which crashes the API). */
+const handleReportError = (res: Response, error: unknown, action: string) => {
+  console.error(`Failed to ${action} IHM report:`, error);
+  return res.status(500).json({ success: false, message: `Could not ${action} the IHM report` });
+};
+
 export async function generateIHMReport(req: Request, res: Response) {
   try {
     const { user } = res.locals;
@@ -276,7 +282,7 @@ export async function generateIHMReport(req: Request, res: Response) {
         .status(error.status)
         .json({ success: false, message: error.message, data: error.data });
     }
-    throw error;
+    return handleReportError(res, error, 'generate');
   }
 }
 
@@ -294,7 +300,7 @@ export async function getIHMReports(req: Request, res: Response) {
         .status(error.status)
         .json({ success: false, message: error.message });
     }
-    throw error;
+    return handleReportError(res, error, 'load');
   }
 }
 
@@ -317,7 +323,7 @@ export async function updateIHMReport(req: Request, res: Response) {
         .status(error.status)
         .json({ success: false, message: error.message });
     }
-    throw error;
+    return handleReportError(res, error, 'update');
   }
 }
 
@@ -337,6 +343,6 @@ export async function deleteIHMReport(req: Request, res: Response) {
         .status(error.status)
         .json({ success: false, message: error.message });
     }
-    throw error;
+    return handleReportError(res, error, 'delete');
   }
 }
