@@ -72,7 +72,11 @@ const positionOf = (roles?: string) =>
 const pinToRow = (pin: any, date?: string): InventoryRow => ({
   pointNo: clean(pin.referenceNo) || undefined,
   name: clean(pin.Description) || '-',
-  application: clean(pin.object?.name) || clean(pin.equipment?.name) || '-',
+  application:
+    clean(pin.object?.name) ||
+    [...new Set((pin.PinHazmat || []).map((h: any) => h.object?.name).filter(Boolean))].join(', ') ||
+    clean(pin.equipment?.name) ||
+    '-',
   location: clean(pin.subLocation?.name) || '-',
   material:
     (pin.PinHazmat || [])
@@ -107,7 +111,7 @@ export async function generateIHMReport(req: Request, res: Response) {
         subLocation: true,
         equipment: true,
         object: true,
-        PinHazmat: { include: { hazmat: true, unit: true } },
+        PinHazmat: { include: { hazmat: true, unit: true, object: true } },
       },
       orderBy: { createdAt: 'asc' },
     });

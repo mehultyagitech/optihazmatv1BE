@@ -266,6 +266,7 @@ export async function getLocationDiagramById(req: Request, res: Response) {
               include: {
                 hazmat: { select: { id: true, name: true } },
                 unit: { select: { id: true, name: true } },
+                object: { select: { id: true, name: true } },
               }
             },
           }

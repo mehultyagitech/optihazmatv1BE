@@ -75,12 +75,13 @@ model Equipment {
 }
 
 model Objects {
-  id         String   @id @default(uuid())
-  name       String   @unique
-  isDisabled Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id         String      @id @default(uuid())
+  name       String      @unique
+  isDisabled Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   Pins       Pins[]
+  PinHazmat  PinHazmat[]
 }
 
 model Compartment {
@@ -125,6 +126,8 @@ model PinHazmat {
   resultType    ResultType @relation(fields: [resultTypeId], references: [id], onDelete: Cascade)
   pinId         String
   pin           Pins       @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  objectId      String?
+  object        Objects?   @relation(fields: [objectId], references: [id], onDelete: SetNull)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
@@ -188,57 +191,57 @@ model ClientManager {
 }
 
 model Vessel {
-  id                     String                 @id @default(uuid())
-  vesselName             String
-  imoNumber              String                 @unique
-  vesselType             String
-  flag                   String
-  classSociety           String
-  portOfRegistry         String
-  grossTonnageMT         Int
-  lbd                    String // L*B*D
-  registeredOwner        String
-  registeredOwnerAddress String
-  clientName             Int
-  vesselManager          Int
-  deliveryDate           DateTime
-  keelLaidDate           DateTime
-  shipYardName           String
-  shipYardAddress        String
-  ihmClass               String
-  ihmSurveyStartDate     DateTime
-  ihmSurveyEndDate       DateTime
-  socIssueDate           DateTime?
-  readyForMaintenance    Boolean                @default(false)
+  id                       String                 @id @default(uuid())
+  vesselName               String
+  imoNumber                String                 @unique
+  vesselType               String
+  flag                     String
+  classSociety             String
+  portOfRegistry           String
+  grossTonnageMT           Int
+  lbd                      String // L*B*D
+  registeredOwner          String
+  registeredOwnerAddress   String
+  clientName               Int
+  vesselManager            Int
+  deliveryDate             DateTime
+  keelLaidDate             DateTime
+  shipYardName             String
+  shipYardAddress          String
+  ihmClass                 String
+  ihmSurveyStartDate       DateTime
+  ihmSurveyEndDate         DateTime
+  socIssueDate             DateTime?
+  readyForMaintenance      Boolean                @default(false)
   // Required by validation; nullable so vessels saved before it existed load.
-  readyForMaintenanceDate DateTime?
-  maintenanceStartDate   DateTime
-  showVesselToOwnerManager Boolean              @default(false)
-  discontinued           Boolean                @default(false)
-  callSign               String?
-  vesselEmailId          String?
-  headerFreeTextCaption  String?
-  headerFreeTextValue    String?
-  poDataGapDisclaimer    String?
-  commonReferenceNo      String?
-  documentTypeId         String?
-  documentType           DocumentType?          @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
-  createdBy              String?
-  user                   User?                  @relation("VesselCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  readyForMaintenanceDate  DateTime?
+  maintenanceStartDate     DateTime
+  showVesselToOwnerManager Boolean                @default(false)
+  discontinued             Boolean                @default(false)
+  callSign                 String?
+  vesselEmailId            String?
+  headerFreeTextCaption    String?
+  headerFreeTextValue      String?
+  poDataGapDisclaimer      String?
+  commonReferenceNo        String?
+  documentTypeId           String?
+  documentType             DocumentType?          @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  createdBy                String?
+  user                     User?                  @relation("VesselCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
   // Set to the signed-in user on every create and update.
-  updatedBy              String?
-  updatedByUser          User?                  @relation("VesselUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  VesselAttachments      VesselAttachments[]
-  VesselImages           VesselImages[]
-  LocationDiagram        LocationDiagram[]
-  Client                 ClientManager          @relation("Client", fields: [clientName], references: [id], onDelete: Cascade)
-  Manager                ClientManager          @relation("Manager", fields: [vesselManager], references: [id], onDelete: Cascade)
-  VesselHistory          VesselHistory[]
-  VesselInventoryImage   VesselInventoryImage[]
-  PurchaseOrders         PurchaseOrder[]
-  IHMReports             IHMReport[]
+  updatedBy                String?
+  updatedByUser            User?                  @relation("VesselUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  VesselAttachments        VesselAttachments[]
+  VesselImages             VesselImages[]
+  LocationDiagram          LocationDiagram[]
+  Client                   ClientManager          @relation("Client", fields: [clientName], references: [id], onDelete: Cascade)
+  Manager                  ClientManager          @relation("Manager", fields: [vesselManager], references: [id], onDelete: Cascade)
+  VesselHistory            VesselHistory[]
+  VesselInventoryImage     VesselInventoryImage[]
+  PurchaseOrders           PurchaseOrder[]
+  IHMReports               IHMReport[]
 }
 
 model VesselInventoryImage {
@@ -341,8 +344,8 @@ model Pins {
   equipment               Equipment                 @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   compartmentId           String
   compartment             Compartment               @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
-  ObjectId                String
-  object                  Objects                   @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
+  ObjectId                String?
+  object                  Objects?                  @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
   inventoryId             String
   inventory               Inventory                 @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
   Description             String
@@ -357,6 +360,9 @@ model Pins {
   installationDate        DateTime?
   useCommonImage          Boolean                   @default(false)
   saveWithoutImage        Boolean                   @default(false)
+  useBatteryImage         Boolean                   @default(false)
+  // "location": one Object for the point; "hazmats": an Object per hazmat row
+  objectSource            String                    @default("location")
   userId                  String
   user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt               DateTime                  @default(now())
@@ -386,6 +392,7 @@ model PinAttachmentPivotLinks {
   pin          Pins           @relation(fields: [pinId], references: [id], onDelete: Cascade)
   attachmentId String
   attachment   PinAttachments @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  useInReport  Boolean        @default(false)
 }
 
 model PinImages {
@@ -425,7 +432,7 @@ model Equipments {
 // ---- Purchase Orders (uploaded from the PO Excel; one PO has many items) ----
 
 model PurchaseOrder {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   poNumber        String
   shipName        String?
   shipImo         String?
@@ -441,12 +448,12 @@ model PurchaseOrder {
   referenceNumber String?
   emailType       String?
   currencyCode    String?
-  docStatus       String    @default("not_started")
+  docStatus       String   @default("not_started")
   vesselId        String?
-  vessel          Vessel?   @relation(fields: [vesselId], references: [id], onDelete: SetNull)
+  vessel          Vessel?  @relation(fields: [vesselId], references: [id], onDelete: SetNull)
   items           PoItem[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([shipImo])
   @@index([poNumber])

@@ -10,7 +10,11 @@ type HazmatRow = {
   unitId: string;
   resultTypeId: string;
   remarks: string | null;
+  objectId: string | null;
 };
+
+/** Object Source value meaning each hazmat row carries its own Object. */
+const OBJECTS_IN_HAZMATS = 'hazmats';
 
 /**
  * The form sends hazmat rows with the quantities as text ("12") and blank
@@ -18,7 +22,7 @@ type HazmatRow = {
  * used to crash the API after the pin itself was saved. Convert and check
  * every row up front, before anything is written.
  */
-const parseHazmatRows = (raw: unknown): HazmatRow[] => {
+const parseHazmatRows = (raw: unknown, objectsInHazmats = false): HazmatRow[] => {
   if (!raw) return [];
   let rows: any[];
   try {
@@ -37,10 +41,12 @@ const parseHazmatRows = (raw: unknown): HazmatRow[] => {
     const hazmatId = Number(row?.hazmatId);
     const unitId = row?.unitId ? String(row.unitId) : '';
     const resultTypeId = row?.resultTypeId ? String(row.resultTypeId) : '';
+    const objectId = row?.objectId ? String(row.objectId) : '';
     const missing = [
       !Number.isInteger(hazmatId) || hazmatId <= 0 ? 'Hazmat' : null,
       !unitId ? 'Unit' : null,
       !resultTypeId ? 'Result Type' : null,
+      objectsInHazmats && !objectId ? 'Object' : null,
     ].filter(Boolean);
     if (missing.length) {
       throw new ApiException(
@@ -55,6 +61,7 @@ const parseHazmatRows = (raw: unknown): HazmatRow[] => {
       unitId,
       resultTypeId,
       remarks: row?.remarks ? String(row.remarks) : null,
+      objectId: objectsInHazmats && objectId ? objectId : null,
     };
   });
 };
@@ -137,8 +144,41 @@ export const getAllPins = async (req: Request, res: Response) => {
         PinImages: true,
         locationDiagram: true,
         subLocation: true,
+        PinHazmat: {
+          include: { hazmat: { select: { id: true, name: true } } },
+        },
       },
     });
+
+    // Card details the Inventory Points page shows: the point's number on its
+    // diagram (oldest first, same as the diagram's Check Point Number), hazmat
+    // names, inventory type (Inventory Class) and status.
+    const diagramIds = [
+      ...new Set((pins.data as any[]).map((pin) => pin.locationDiagramId)),
+    ];
+    const siblings = await prisma.pins.findMany({
+      where: { locationDiagramId: { in: diagramIds } },
+      select: { id: true, locationDiagramId: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const numberById = new Map<string, number>();
+    const countByDiagram = new Map<string, number>();
+    for (const sibling of siblings) {
+      const next = (countByDiagram.get(sibling.locationDiagramId) ?? 0) + 1;
+      countByDiagram.set(sibling.locationDiagramId, next);
+      numberById.set(sibling.id, next);
+    }
+    pins.data = (pins.data as any[]).map((pin) => ({
+      ...pin,
+      inventoryPointNumber: numberById.get(pin.id) ?? null,
+      hazmats:
+        (pin.PinHazmat ?? [])
+          .map((row: any) => row.hazmat?.name)
+          .filter(Boolean)
+          .join(', ') || '-',
+      inventoryType: pin.inventory?.name ?? '-',
+      status: pin.isRemovedFromIHM ? 'Removed' : pin.isReplaced ? 'Replaced' : 'Active',
+    })) as any;
 
     const VesselInventoryImage = await prisma.vesselInventoryImage.findFirst({
       where: {
@@ -194,8 +234,10 @@ export const getPinById = async (req: Request, res: Response) => {
       });
 
     const PinAttachmentLink: Record<string, boolean> = {};
+    const PinAttachmentReport: Record<string, boolean> = {};
     PinAttachmentLinkPivots.forEach((pivot) => {
       PinAttachmentLink[pivot.attachmentId] = true;
+      PinAttachmentReport[pivot.attachmentId] = pivot.useInReport;
     });
 
     res.json({
@@ -205,6 +247,7 @@ export const getPinById = async (req: Request, res: Response) => {
         ...pin,
         PinAttachments,
         PinAttachmentLink,
+        PinAttachmentReport,
       },
     });
   } catch (error) {
@@ -217,7 +260,14 @@ export const createPin = async (req: Request, res: Response) => {
     const { user } = res.locals;
     const body = JSON.parse(JSON.stringify(req.body));
     const { hazmats: hazmatData, ...pinData } = body;
-    const hazmats = parseHazmatRows(hazmatData);
+    const objectsInHazmats = pinData.objectSource === OBJECTS_IN_HAZMATS;
+    const hazmats = parseHazmatRows(hazmatData, objectsInHazmats);
+    if (objectsInHazmats && !hazmats.length) {
+      throw new ApiException('Add at least one hazmat with its Object in the Hazmats tab', 422);
+    }
+    if (!objectsInHazmats && !pinData.object) {
+      throw new ApiException('Please select an Object', 422);
+    }
     const files = req.files;
 
     // All or nothing: a failure part-way (a bad hazmat row, a missing
@@ -248,11 +298,9 @@ export const createPin = async (req: Request, res: Response) => {
               id: pinData.compartment,
             },
           },
-          object: {
-            connect: {
-              id: pinData.object,
-            },
-          },
+          ...(objectsInHazmats
+            ? {}
+            : { object: { connect: { id: pinData.object } } }),
           inventory: {
             connect: {
               id: pinData.inventory,
@@ -280,6 +328,8 @@ export const createPin = async (req: Request, res: Response) => {
           useCommonImage: pinData.useCommonImage === 'true',
           installationDate: pinData.installationDate ? new Date(pinData.installationDate) : null,
           saveWithoutImage: pinData.saveWithoutImage === 'true',
+          useBatteryImage: pinData.useBatteryImage === 'true',
+          objectSource: objectsInHazmats ? OBJECTS_IN_HAZMATS : 'location',
         },
       });
 
@@ -360,7 +410,14 @@ export const updatePin = async (req: Request, res: Response) => {
     const { id } = req.params;
     const body = JSON.parse(JSON.stringify(req.body));
     const { hazmats: hazmatData, ...pinData } = body;
-    const hazmats = parseHazmatRows(hazmatData);
+    const objectsInHazmats = pinData.objectSource === OBJECTS_IN_HAZMATS;
+    const hazmats = parseHazmatRows(hazmatData, objectsInHazmats);
+    if (objectsInHazmats && !hazmats.length) {
+      throw new ApiException('Add at least one hazmat with its Object in the Hazmats tab', 422);
+    }
+    if (!objectsInHazmats && !pinData.object) {
+      throw new ApiException('Please select an Object', 422);
+    }
     const files = req.files;
 
     const existingPin = await prisma.pins.findUnique({
@@ -396,11 +453,9 @@ export const updatePin = async (req: Request, res: Response) => {
             id: pinData.compartment,
           },
         },
-        object: {
-          connect: {
-            id: pinData.object,
-          },
-        },
+        object: objectsInHazmats
+          ? { disconnect: true }
+          : { connect: { id: pinData.object } },
         inventory: {
           connect: {
             id: pinData.inventory,
@@ -428,6 +483,8 @@ export const updatePin = async (req: Request, res: Response) => {
         useCommonImage: pinData.useCommonImage === 'true',
         installationDate: pinData.installationDate ? new Date(pinData.installationDate) : null,
         saveWithoutImage: pinData.saveWithoutImage === 'true',
+        useBatteryImage: pinData.useBatteryImage === 'true',
+        objectSource: objectsInHazmats ? OBJECTS_IN_HAZMATS : 'location',
       },
     });
 
@@ -529,7 +586,7 @@ export const updatePin = async (req: Request, res: Response) => {
 
 export const pinAttachmentLink = async (req: Request, res: Response) => {
   try {
-    const { pinId, attachmentId, linked } = req.body;
+    const { pinId, attachmentId, linked, useInReport } = req.body;
 
     if (!pinId || !attachmentId) {
       throw new ApiException('Pin ID and Attachment ID are required', 400);
@@ -547,6 +604,8 @@ export const pinAttachmentLink = async (req: Request, res: Response) => {
         data: {
           pinId,
           attachmentId,
+          // Only a linked document can be added to the report.
+          useInReport: !!useInReport,
         },
       });
     }
