@@ -68,7 +68,20 @@ export async function createCompartment(req: Request, res: Response) {
       data: compartment,
     });
   } catch (error) {
-    throw error;
+    // Answer instead of rethrowing: a rethrow from an async handler is an
+    // unhandled rejection that takes the whole API down. The name is unique,
+    // so adding one that already exists (even disabled) lands here.
+    if ((error as { code?: string })?.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        message: 'A Compartment with this name already exists (it may be disabled in master data)',
+      });
+    }
+    console.error('Failed to create compartment:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not create the compartment',
+    });
   }
 }
 
