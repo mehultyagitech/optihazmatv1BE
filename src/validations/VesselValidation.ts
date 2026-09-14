@@ -45,7 +45,7 @@ export const vesselDataValidation = Joi.object({
   headerFreeTextCaption: Joi.string().max(20).optional(),
   headerFreeTextValue: Joi.string().max(40).optional(),
   poDataGapDisclaimer: Joi.string().max(500).optional(),
-  commonReferenceNo: Joi.string().optional(),
+  commonReferenceNo: Joi.string().allow('', null).optional(),
   callSign: Joi.string()
     .pattern(/^[A-Za-z0-9]+$/)
     .required()
@@ -107,7 +107,7 @@ export const vesselUpdateValidation = (id: string) =>
     headerFreeTextCaption: Joi.string().max(20).optional(),
     headerFreeTextValue: Joi.string().max(40).optional(),
     poDataGapDisclaimer: Joi.string().max(500).optional(),
-    commonReferenceNo: Joi.string().optional(),
+    commonReferenceNo: Joi.string().allow('', null).optional(),
   callSign: Joi.string()
     .pattern(/^[A-Za-z0-9]+$/)
     .required()
