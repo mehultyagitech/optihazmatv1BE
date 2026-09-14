@@ -69,58 +69,47 @@ export async function getAllDashboardData(req: Request, res: Response) {
 
   export async function getAllVesselDashboardData(req: Request, res: Response) {
     try {
-      const { vesselId } = req.params;  
+      const { vesselId } = req.params;
       if (!vesselId) {
         return res.status(400).json({
           success: false,
           message: 'vesselId is required',
         });
       }
-  
+
       const vesselExists = await prisma.vessel.count({
         where: { id: vesselId as string },
       });
-  
+
       if (!vesselExists) {
         return res.status(404).json({
           success: false,
           message: 'Vessel not found',
         });
       }
-  
-      const [i1InventoryPts, i2InventoryPts, i3InventoryPts] = await Promise.all([
+
+      // IHM Part 1 = Initial IHM Part 1 + Installed Items - Replaced Items -
+      // Removed Items, so the class counts leave out replaced/removed points.
+      const onVessel = { locationDiagram: { vesselId: vesselId as string } };
+      const onBoardInClass = (name: string) =>
         prisma.pins.count({
           where: {
-            locationDiagram: {
-              vesselId: vesselId as string,
-            },
-            inventory: {
-              name: 'i1',
-            },
+            ...onVessel,
+            isRemovedFromIHM: false,
+            isReplaced: false,
+            inventory: { name },
           },
-        }),
-        prisma.pins.count({
-          where: {
-            locationDiagram: {
-              vesselId: vesselId as string,
-            },
-            inventory: {
-              name: 'i2',
-            },
-          },
-        }),
-        prisma.pins.count({
-          where: {
-            locationDiagram: {
-              vesselId: vesselId as string,
-            },
-            inventory: {
-              name: 'i3',
-            },
-          },
-        }),
-      ]);
-  
+        });
+
+      const [i1InventoryPts, i2InventoryPts, i3InventoryPts, replacedItems, removedItems] =
+        await Promise.all([
+          onBoardInClass('i1'),
+          onBoardInClass('i2'),
+          onBoardInClass('i3'),
+          prisma.pins.count({ where: { ...onVessel, isReplaced: true } }),
+          prisma.pins.count({ where: { ...onVessel, isRemovedFromIHM: true } }),
+        ]);
+
       res.status(200).json({
         success: true,
         overview: {
@@ -128,6 +117,8 @@ export async function getAllDashboardData(req: Request, res: Response) {
           i1InventoryPts,
           i2InventoryPts,
           i3InventoryPts,
+          replacedItems,
+          removedItems,
         },
         message: 'Vessel inventory summary fetched successfully',
       });
@@ -139,15 +130,11 @@ export async function getAllDashboardData(req: Request, res: Response) {
           data: error.data,
         });
       }
-      throw error;
+      // Rethrowing here would crash the API (unhandled rejection).
+      console.error('Failed to load vessel dashboard:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Could not load the vessel dashboard',
+      });
     }
   }
-  
-  
-  
-  
-  
-  
-  
-  
-  

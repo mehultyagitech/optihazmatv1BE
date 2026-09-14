@@ -104,7 +104,7 @@ const handlePinError = (res: Response, error: unknown, action: string) => {
 export const getAllPins = async (req: Request, res: Response) => {
   try {
     const { vesselId } = req.params;
-    const { search } = req.query;
+    const { search, inventoryType, status } = req.query;
     const pagination = res.locals.pagination;
     const { page, limit, offset } = pagination;
 
@@ -117,6 +117,19 @@ export const getAllPins = async (req: Request, res: Response) => {
         vesselId: vesselId as string,
       },
     };
+
+    // Filters from the Inventory Points page and the dashboard's Part 1 cards.
+    if (inventoryType) {
+      where.inventory = { name: String(inventoryType) };
+    }
+    if (status === 'Active') {
+      where.isRemovedFromIHM = false;
+      where.isReplaced = false;
+    } else if (status === 'Removed') {
+      where.isRemovedFromIHM = true;
+    } else if (status === 'Replaced') {
+      where.isReplaced = true;
+    }
 
     if (search) {
       where.AND = [
@@ -139,13 +152,26 @@ export const getAllPins = async (req: Request, res: Response) => {
       limit: Number(limit),
       offset,
       where,
+      orderBy: { createdAt: 'asc' },
       include: {
         inventory: true,
         PinImages: true,
-        locationDiagram: true,
+        locationDiagram: {
+          include: {
+            location: { select: { id: true, name: true } },
+            subLocation: { select: { id: true, name: true } },
+          },
+        },
         subLocation: true,
+        equipment: { select: { id: true, name: true } },
+        compartment: { select: { id: true, name: true } },
+        object: { select: { id: true, name: true } },
         PinHazmat: {
-          include: { hazmat: { select: { id: true, name: true } } },
+          include: {
+            hazmat: { select: { id: true, name: true } },
+            unit: { select: { id: true, name: true } },
+            object: { select: { id: true, name: true } },
+          },
         },
       },
     });
@@ -617,6 +643,72 @@ export const pinAttachmentLink = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return handlePinError(res, error, 'link attachments for');
+  }
+};
+
+/**
+ * "Update Common Data" on the Inventory Points page: apply one of the vessel's
+ * shared values to the selected points.
+ */
+export const updateCommonData = async (req: Request, res: Response) => {
+  try {
+    const { vesselId } = req.params;
+    const { ids, action } = req.body ?? {};
+
+    if (!Array.isArray(ids) || !ids.length) {
+      throw new ApiException('Select at least one inventory point', 422);
+    }
+
+    const vessel = await prisma.vessel.findUnique({
+      where: { id: vesselId },
+      select: {
+        commonReferenceNo: true,
+        VesselInventoryImage: { select: { id: true } },
+      },
+    });
+    if (!vessel) {
+      throw new ApiException('Vessel not found', 404);
+    }
+
+    let data: Prisma.PinsUpdateManyMutationInput;
+    switch (action) {
+      case 'commonImage':
+        if (!vessel.VesselInventoryImage.length) {
+          throw new ApiException(
+            'This vessel has no Common Inventory Image yet. Add it in the vessel form first.',
+            422,
+          );
+        }
+        data = { useCommonImage: true, useBatteryImage: false };
+        break;
+      case 'commonReference':
+        if (!vessel.commonReferenceNo?.trim()) {
+          throw new ApiException(
+            'This vessel has no Common Reference No yet. Add it in the vessel form first.',
+            422,
+          );
+        }
+        data = { referenceNo: vessel.commonReferenceNo };
+        break;
+      case 'batteryImage':
+        data = { useBatteryImage: true, useCommonImage: false };
+        break;
+      default:
+        throw new ApiException('Unknown common data option', 422);
+    }
+
+    const result = await prisma.pins.updateMany({
+      where: { id: { in: ids.map(String) }, locationDiagram: { vesselId } },
+      data,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Common data applied',
+      data: { updated: result.count },
+    });
+  } catch (error) {
+    return handlePinError(res, error, 'update common data for');
   }
 };
 

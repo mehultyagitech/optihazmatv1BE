@@ -6,6 +6,7 @@ import {
   updatePin,
   deletePin,
   pinAttachmentLink,
+  updateCommonData,
 } from '../controllers/PinController';
 import upload from '../middlewares/Multer';
 import Authenticate from '../middlewares/Authenticate';
@@ -18,6 +19,7 @@ router.get('/:id', Authenticate, getPinById);
 router.post('/', Authenticate, upload.any(), createPin);
 router.put('/:id', Authenticate, upload.any(), updatePin);
 router.post('/link-attachments', Authenticate, pinAttachmentLink);
+router.post('/:vesselId/common-data', Authenticate, updateCommonData);
 router.delete('/:id', Authenticate, deletePin);
 
 export default router;

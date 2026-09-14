@@ -110,6 +110,7 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
             installationDate: true,
             isRemovedFromIHM: true,
             isReplaced: true,
+            inventory: { select: { name: true } },
           }
         }
       }
@@ -128,6 +129,15 @@ export async function getAllLocationDiagrams(req: Request, res: Response) {
           maintenance: pins.filter((p: any) => !!p.installationDate).length,
           removedReplaced: pins.filter((p: any) => p.isRemovedFromIHM || p.isReplaced).length,
           active: pins.filter((p: any) => !p.isRemovedFromIHM).length,
+          // On board (not removed or replaced) per IHM Part 1 class.
+          ...Object.fromEntries(
+            ['i1', 'i2', 'i3'].map((name) => [
+              name,
+              pins.filter(
+                (p: any) => !p.isRemovedFromIHM && !p.isReplaced && p.inventory?.name === name,
+              ).length,
+            ]),
+          ),
         },
       };
     });
