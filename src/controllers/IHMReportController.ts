@@ -238,7 +238,11 @@ export async function generateIHMReport(req: Request, res: Response) {
 
     const purchaseOrders = {
       hazmat: pos.filter(hasHazmat).map(toPoRow),
-      hazmatFree: pos.filter((p) => (p.items || []).length > 0 && !hasHazmat(p)).map(toPoRow),
+      // Hazmat free means the supplier's declarations are in and show no hazmat;
+      // POs still awaiting declarations belong to 3.5 only.
+      hazmatFree: pos
+        .filter((p) => (p.items || []).length > 0 && !hasHazmat(p) && !notReceived(p))
+        .map(toPoRow),
       noDeclaration: pos.filter(notReceived).map(toPoRow),
     };
 
