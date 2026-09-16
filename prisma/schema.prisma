@@ -243,6 +243,7 @@ model Vessel {
   VesselInventoryImage     VesselInventoryImage[]
   PurchaseOrders           PurchaseOrder[]
   IHMReports               IHMReport[]
+  IHMCertificates          IHMCertificate[]
 }
 
 model VesselInventoryImage {
@@ -498,4 +499,23 @@ model IHMReport {
   updatedAt       DateTime  @updatedAt
 
   @@index([vesselId])
+}
+
+// Active / inactive state of a vessel's IHM maintenance certificates. The
+// certificates themselves are generated on demand (one per month from the
+// Maintenance Start Date, plus the ANNUAL one before it); a row exists only
+// once a certificate's state has been changed. Inactive = hidden from
+// non-admin (ship) users.
+model IHMCertificate {
+  id        String   @id @default(uuid())
+  vesselId  String
+  vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  // "2026-07" for a monthly certificate, "ANNUAL" for the initial one.
+  period    String
+  isActive  Boolean  @default(true)
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vesselId, period])
 }
