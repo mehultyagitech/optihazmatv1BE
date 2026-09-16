@@ -572,6 +572,30 @@ export const updatePin = async (req: Request, res: Response) => {
 
     const { deletedAttachments, deletedImages } = pinData;
 
+    // Document type changes on attachments that were already uploaded. The
+    // Link Attachments tab lists the whole vessel's attachments, so any
+    // attachment on the same vessel can be retyped from here.
+    const attachmentTypes: { id: string; documentTypeId: string }[] = (() => {
+      try {
+        return pinData.attachmentTypes ? JSON.parse(pinData.attachmentTypes) : [];
+      } catch {
+        throw new ApiException('Attachment document types could not be read', 422);
+      }
+    })();
+    const vesselId = (
+      await prisma.locationDiagram.findUnique({
+        where: { id: updatedPin.locationDiagramId },
+        select: { vesselId: true },
+      })
+    )?.vesselId;
+    for (const { id: attachmentId, documentTypeId } of attachmentTypes) {
+      if (!attachmentId || !documentTypeId) continue;
+      await prisma.pinAttachments.updateMany({
+        where: { id: attachmentId, pin: { locationDiagram: { vesselId } } },
+        data: { documentTypeId },
+      });
+    }
+
     type PinAttachmentType = {
       id: string;
       file: PinImages | PinAttachments;
