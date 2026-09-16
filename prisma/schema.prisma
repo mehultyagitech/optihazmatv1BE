@@ -342,8 +342,8 @@ model Pins {
   subLocation             SubLocation               @relation(fields: [subLocationId], references: [id], onDelete: Cascade)
   equipmentId             String
   equipment               Equipment                 @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  compartmentId           String
-  compartment             Compartment               @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
+  compartmentId           String?
+  compartment             Compartment?              @relation(fields: [compartmentId], references: [id], onDelete: Cascade)
   ObjectId                String?
   object                  Objects?                  @relation(fields: [ObjectId], references: [id], onDelete: Cascade)
   inventoryId             String

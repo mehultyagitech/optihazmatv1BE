@@ -13,6 +13,10 @@ type HazmatRow = {
   objectId: string | null;
 };
 
+/** A form field that was actually filled in (FormData sends blanks as "" or "undefined"). */
+const hasValue = (value: unknown) =>
+  value !== undefined && value !== null && !['', 'undefined', 'null'].includes(String(value).trim());
+
 /** Object Source value meaning each hazmat row carries its own Object. */
 const OBJECTS_IN_HAZMATS = 'hazmats';
 
@@ -319,11 +323,10 @@ export const createPin = async (req: Request, res: Response) => {
               id: pinData.equipment,
             },
           },
-          compartment: {
-            connect: {
-              id: pinData.compartment,
-            },
-          },
+          // Compartment is optional; the form sends nothing (or "undefined") when blank.
+          ...(hasValue(pinData.compartment)
+            ? { compartment: { connect: { id: pinData.compartment } } }
+            : {}),
           ...(objectsInHazmats
             ? {}
             : { object: { connect: { id: pinData.object } } }),
@@ -474,11 +477,9 @@ export const updatePin = async (req: Request, res: Response) => {
             id: pinData.equipment,
           },
         },
-        compartment: {
-          connect: {
-            id: pinData.compartment,
-          },
-        },
+        compartment: hasValue(pinData.compartment)
+          ? { connect: { id: pinData.compartment } }
+          : { disconnect: true },
         object: objectsInHazmats
           ? { disconnect: true }
           : { connect: { id: pinData.object } },
