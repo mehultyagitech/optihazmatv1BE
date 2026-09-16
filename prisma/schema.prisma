@@ -146,7 +146,8 @@ model User {
   loginLogs       LoginLog[]
   Vessel          Vessel[]          @relation("VesselCreatedBy")
   UpdatedVessels  Vessel[]          @relation("VesselUpdatedBy")
-  Pins            Pins[]
+  Pins            Pins[]            @relation("PinCreatedBy")
+  UpdatedPins     Pins[]            @relation("PinUpdatedBy")
   LocationDiagram LocationDiagram[]
 }
 
@@ -364,7 +365,10 @@ model Pins {
   // "location": one Object for the point; "hazmats": an Object per hazmat row
   objectSource            String                    @default("location")
   userId                  String
-  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                    User                      @relation("PinCreatedBy", fields: [userId], references: [id], onDelete: Cascade)
+  // Set on every create and update; `user` stays the creator.
+  updatedBy               String?
+  updatedByUser           User?                     @relation("PinUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
   PinAttachments          PinAttachments[]

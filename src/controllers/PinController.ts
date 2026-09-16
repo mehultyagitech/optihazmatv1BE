@@ -238,6 +238,9 @@ export const getPinById = async (req: Request, res: Response) => {
         PinImages: true,
         locationDiagram: true,
         PinHazmat: true,
+        // Audit trail in the drawer.
+        user: { select: { id: true, name: true, email: true } },
+        updatedByUser: { select: { id: true, name: true, email: true } },
       },
     });
     if (!pin) return res.status(404).json({ error: 'Pin not found' });
@@ -341,6 +344,11 @@ export const createPin = async (req: Request, res: Response) => {
           referenceNo: pinData.referenceNo,
           remarks: pinData.remarks,
           user: {
+            connect: {
+              id: user.id,
+            },
+          },
+          updatedByUser: {
             connect: {
               id: user.id,
             },
@@ -493,7 +501,8 @@ export const updatePin = async (req: Request, res: Response) => {
         manufacturerBrand: pinData.manufacturerBrand,
         referenceNo: pinData.referenceNo,
         remarks: pinData.remarks,
-        user: {
+        // Keep the creator; record who changed it.
+        updatedByUser: {
           connect: {
             id: user.id,
           },
