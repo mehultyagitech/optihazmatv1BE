@@ -15,7 +15,9 @@ import { getClientManagers,getClientManager,createClientManager,updateClientMana
 const UserRoutes = Router();
 
 UserRoutes.get('/me', Authenticate, (_, res) => {
-  res.status(200).json({ success: true, data: res.locals.user });
+  // Only what the app needs: never the password hash or session counters.
+  const { id, name, email, roles, disabled, createdAt } = res.locals.user;
+  res.status(200).json({ success: true, data: { id, name, email, roles, disabled, createdAt } });
 });
 UserRoutes.get('/users', Authenticate, HasRole(Role.ADMIN), Paginate, getUsers);
 UserRoutes.post('/users', Authenticate, HasRole(Role.ADMIN), createUser);
