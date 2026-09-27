@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../database/Prisma';
 import ApiException from '../errors/ApiException';
 import { PinAttachments, PinImages, Pins, Prisma } from '@prisma/client';
+import { inventoryPointNumbers } from '../services/InventoryPointNumber';
 
 type HazmatRow = {
   hazmatId: number;
@@ -180,24 +181,10 @@ export const getAllPins = async (req: Request, res: Response) => {
       },
     });
 
-    // Card details the Inventory Points page shows: the point's number on its
-    // diagram (oldest first, same as the diagram's Check Point Number), hazmat
+    // Card details the Inventory Points page shows: the point's number, which
+    // carries its location category's prefix (MD-001, ER-001, ...), hazmat
     // names, inventory type (Inventory Class) and status.
-    const diagramIds = [
-      ...new Set((pins.data as any[]).map((pin) => pin.locationDiagramId)),
-    ];
-    const siblings = await prisma.pins.findMany({
-      where: { locationDiagramId: { in: diagramIds } },
-      select: { id: true, locationDiagramId: true },
-      orderBy: { createdAt: 'asc' },
-    });
-    const numberById = new Map<string, number>();
-    const countByDiagram = new Map<string, number>();
-    for (const sibling of siblings) {
-      const next = (countByDiagram.get(sibling.locationDiagramId) ?? 0) + 1;
-      countByDiagram.set(sibling.locationDiagramId, next);
-      numberById.set(sibling.id, next);
-    }
+    const numberById = await inventoryPointNumbers(vesselId as string);
     pins.data = (pins.data as any[]).map((pin) => ({
       ...pin,
       inventoryPointNumber: numberById.get(pin.id) ?? null,

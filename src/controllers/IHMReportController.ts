@@ -16,6 +16,7 @@ import {
   PoRow,
   ReportAttachment,
 } from '../services/IHMReportService';
+import { inventoryPointNumbers } from '../services/InventoryPointNumber';
 
 const UPLOADS_DIR = path.join(__dirname, '../../public/uploads');
 
@@ -169,8 +170,9 @@ export async function generateIHMReport(req: Request, res: Response) {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Inventory point numbers used throughout the report: IP-001, IP-002, ...
-    const pointNo = new Map(pins.map((p, i) => [p.id, `IP-${String(i + 1).padStart(3, '0')}`]));
+    // Inventory point numbers used throughout the report. Each carries the
+    // prefix of its location category: MD-001, ER-001, SS-001, ...
+    const pointNo = await inventoryPointNumbers(vesselId);
     const pointRef = (p: any) => `${p.inventory?.name || '-'} - ${pointNo.get(p.id)}`;
 
     const onBoard = pins.filter((p) => !p.isRemovedFromIHM && !p.isReplaced);
