@@ -4,7 +4,9 @@ import prisma from '../database/Prisma';
 export const vesselDataValidation = Joi.object({
   vesselName: Joi.string().required(),
   imoNumber: Joi.string()
+    .pattern(/^[0-9]{7}$/)
     .required()
+    .messages({ 'string.pattern.base': 'IMO Number must be a 7 digit number' })
     .external(async (value, helpers) => {
       const vessel = await prisma.vessel.findFirst({
         where: { imoNumber: value },
@@ -42,9 +44,9 @@ export const vesselDataValidation = Joi.object({
     .email({ tlds: { allow: false } })
     .optional()
     .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/),
-  headerFreeTextCaption: Joi.string().max(20).optional(),
-  headerFreeTextValue: Joi.string().max(40).optional(),
-  poDataGapDisclaimer: Joi.string().max(500).optional(),
+  headerFreeTextCaption: Joi.string().max(20).allow('', null).optional(),
+  headerFreeTextValue: Joi.string().max(40).allow('', null).optional(),
+  poDataGapDisclaimer: Joi.string().max(500).allow('', null).optional(),
   commonReferenceNo: Joi.string().allow('', null).optional(),
   callSign: Joi.string()
     .pattern(/^[A-Za-z0-9]+$/)
@@ -56,14 +58,16 @@ export const vesselDataValidation = Joi.object({
   createdBy: Joi.string().optional(),
   attachments: Joi.any().optional(),
   discontinued: Joi.boolean().optional(),
-  discontinueRemarks: Joi.string().max(500).optional(),
+  discontinueRemarks: Joi.string().max(500).allow('', null).optional(),
 });
 
 export const vesselUpdateValidation = (id: string) =>
   Joi.object({
     vesselName: Joi.string().required(),
     imoNumber: Joi.string()
+      .pattern(/^[0-9]{7}$/)
       .required()
+      .messages({ 'string.pattern.base': 'IMO Number must be a 7 digit number' })
       .external(async (value, helpers) => {
         const vessel = await prisma.vessel.findFirst({
           where: {
@@ -104,9 +108,9 @@ export const vesselUpdateValidation = (id: string) =>
       .email({ tlds: { allow: false } })
       .optional()
       .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/),
-    headerFreeTextCaption: Joi.string().max(20).optional(),
-    headerFreeTextValue: Joi.string().max(40).optional(),
-    poDataGapDisclaimer: Joi.string().max(500).optional(),
+    headerFreeTextCaption: Joi.string().max(20).allow('', null).optional(),
+    headerFreeTextValue: Joi.string().max(40).allow('', null).optional(),
+    poDataGapDisclaimer: Joi.string().max(500).allow('', null).optional(),
     commonReferenceNo: Joi.string().allow('', null).optional(),
   callSign: Joi.string()
     .pattern(/^[A-Za-z0-9]+$/)
@@ -118,5 +122,5 @@ export const vesselUpdateValidation = (id: string) =>
     createdBy: Joi.string().optional(),
     deletedAttachments: Joi.any().optional(),
     discontinued: Joi.boolean().optional(),
-    discontinueRemarks: Joi.string().max(500).optional(),
+    discontinueRemarks: Joi.string().max(500).allow('', null).optional(),
   });
