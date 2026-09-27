@@ -150,24 +150,10 @@ async function main() {
     });
   }
 
-  // Create default inventory items
-  const inventory = await prisma.inventory.upsert({
-    where: { name: 'Default Inventory' },
-    update: {},
-    create: {
-      name: 'Default Inventory',
-    },
-  });
+  // Inventory classes. Only the three IHM classes are valid.
+  const inventories = ['i1', 'i2', 'i3'];
 
-  const additionalInventories = [
-    'Spare Parts',
-    'Tools',
-    'Safety Equipment',
-    'Cleaning Supplies',
-    'Navigation Equipment',
-  ];
-
-  for (const name of additionalInventories) {
+  for (const name of inventories) {
     await prisma.inventory.upsert({
       where: { name },
       update: {},
