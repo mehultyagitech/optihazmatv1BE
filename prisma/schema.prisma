@@ -244,6 +244,7 @@ model Vessel {
   PurchaseOrders           PurchaseOrder[]
   IHMReports               IHMReport[]
   IHMCertificates          IHMCertificate[]
+  DesignatedPersons        VesselDesignatedPerson[]
 }
 
 model VesselInventoryImage {
@@ -520,19 +521,34 @@ model IHMCertificate {
   @@unique([vesselId, period])
 }
 
-// Designated Person: who is responsible for keeping the IHM up to date. The
-// IHM report lists them with their signature, so a DP has an effective period
-// and a new one is added rather than the previous one being edited.
+// Designated Person: who can be made responsible for keeping an IHM up to
+// date. Who holds the role on a given vessel, and for how long, is recorded
+// per vessel in VesselDesignatedPerson.
 model DesignatedPerson {
-  id            String    @id @default(uuid())
+  id            String                   @id @default(uuid())
   name          String
   position      String
   initials      String
   signatureUrl  String?
   signatureName String?
-  effectiveFrom DateTime
-  effectiveTo   DateTime?
   createdBy     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  vessels       VesselDesignatedPerson[]
+}
+
+// A DP's spell on one vessel. The IHM report lists these with the dates, so a
+// change of DP is a new row rather than an edit of the old one.
+model VesselDesignatedPerson {
+  id                 String           @id @default(uuid())
+  vesselId           String
+  vessel             Vessel           @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  designatedPersonId String
+  designatedPerson   DesignatedPerson @relation(fields: [designatedPersonId], references: [id], onDelete: Restrict)
+  effectiveFrom      DateTime
+  effectiveTo        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([vesselId])
 }

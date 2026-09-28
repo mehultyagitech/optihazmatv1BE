@@ -196,6 +196,11 @@ export const getVesselById = async (req: Request, res: Response) => {
         },
         VesselHistory: true,
         VesselInventoryImage: true,
+        // The DP spells the form shows, newest first.
+        DesignatedPersons: {
+          include: { designatedPerson: true },
+          orderBy: { effectiveFrom: 'desc' },
+        },
       },
     });
     if (!vessel) return res.status(404).json({ error: 'Vessel not found' });
@@ -212,6 +217,35 @@ export const getVesselById = async (req: Request, res: Response) => {
   }
 };
 
+
+/**
+ * The DP spells a vessel's form holds, saved as the whole list: the form sends
+ * every row it shows, so the stored rows are replaced by them.
+ */
+async function saveDesignatedPersons(vesselId: string, rows: unknown) {
+  if (rows === undefined || rows === null) return;
+  if (!Array.isArray(rows)) throw new ApiException('DP Details are not in the expected form', 400);
+
+  const data = rows.map((row: any) => {
+    const designatedPersonId = String(row?.designatedPersonId ?? '').trim();
+    if (!designatedPersonId) throw new ApiException('Each DP row needs a DP', 400);
+
+    const from = new Date(String(row?.effectiveFrom ?? ''));
+    if (Number.isNaN(from.getTime())) throw new ApiException('Each DP row needs an Effective From Date', 400);
+
+    const to = row?.effectiveTo ? new Date(String(row.effectiveTo)) : null;
+    if (to && Number.isNaN(to.getTime())) throw new ApiException('An Effective To Date is not a valid date', 400);
+    if (to && to < from) throw new ApiException('An Effective To Date is before its Effective From Date', 400);
+
+    return { vesselId, designatedPersonId, effectiveFrom: from, effectiveTo: to };
+  });
+
+  await prisma.$transaction([
+    prisma.vesselDesignatedPerson.deleteMany({ where: { vesselId } }),
+    ...(data.length ? [prisma.vesselDesignatedPerson.createMany({ data })] : []),
+  ]);
+}
+
 export const createVessel = async (req: Request, res: Response) => {
   try {
     const { user } = res.locals;
@@ -219,6 +253,7 @@ export const createVessel = async (req: Request, res: Response) => {
     const {
       attachments: dAtt,
       discontinueRemarks,
+      designatedPersons,
       ...vesselData
     } = JSON.parse(vesselDataStr);
 
@@ -253,6 +288,8 @@ export const createVessel = async (req: Request, res: Response) => {
     const vessel = await prisma.vessel.create({
       data: vesselData,
     });
+
+    await saveDesignatedPersons(vessel.id, designatedPersons);
 
     // Back-link any purchase orders uploaded before this vessel existed.
     if (vessel.imoNumber) {
@@ -417,6 +454,7 @@ export const updateVessel = async (req: Request, res: Response) => {
       attachments: dAtt,
       deletedAttachments,
       discontinueRemarks,
+      designatedPersons,
       clientName: clientId,
       vesselManager: vesselManagerId,
       ...vesselData
@@ -472,6 +510,8 @@ export const updateVessel = async (req: Request, res: Response) => {
         updatedByUser: { connect: { id: res.locals.user.id } },
       },
     });
+
+    await saveDesignatedPersons(vessel.id, designatedPersons);
 
     // Keep purchase-order links in sync with the vessel's IMO number.
     if (vessel.imoNumber) {

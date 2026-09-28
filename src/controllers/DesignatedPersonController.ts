@@ -14,16 +14,6 @@ const fail = (res: Response, error: unknown, fallback: string) => {
   return res.status(500).json({ success: false, message: fallback });
 };
 
-const parseDate = (value: unknown, label: string, required: boolean): Date | null => {
-  if (value === undefined || value === null || value === '') {
-    if (required) throw new ApiException(`${label} is required`, 400);
-    return null;
-  }
-  const date = new Date(String(value));
-  if (Number.isNaN(date.getTime())) throw new ApiException(`${label} is not a valid date`, 400);
-  return date;
-};
-
 const text = (value: unknown, label: string): string => {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) throw new ApiException(`${label} is required`, 400);
@@ -63,8 +53,7 @@ export async function getAllDesignatedPersons(req: Request, res: Response) {
       limit: Number(limit),
       offset,
       where,
-      // The person in charge now first.
-      orderBy: { effectiveFrom: 'desc' },
+      orderBy: { name: 'asc' },
     });
 
     return res.status(200).json({
@@ -91,8 +80,6 @@ export async function createDesignatedPerson(req: Request, res: Response) {
         name: text(req.body.name, 'DP Name'),
         position: text(req.body.position, 'Position'),
         initials: text(req.body.initials, 'Initials'),
-        effectiveFrom: parseDate(req.body.effectiveFrom, 'Effective From Date', true) as Date,
-        effectiveTo: parseDate(req.body.effectiveTo, 'Effective To Date', false),
         signatureUrl: signature?.filename ?? null,
         signatureName: signature?.originalname ?? null,
         createdBy: res.locals.user?.id ?? null,
@@ -120,8 +107,6 @@ export async function updateDesignatedPerson(req: Request, res: Response) {
         name: text(req.body.name, 'DP Name'),
         position: text(req.body.position, 'Position'),
         initials: text(req.body.initials, 'Initials'),
-        effectiveFrom: parseDate(req.body.effectiveFrom, 'Effective From Date', true) as Date,
-        effectiveTo: parseDate(req.body.effectiveTo, 'Effective To Date', false),
         ...(signature
           ? { signatureUrl: signature.filename, signatureName: signature.originalname }
           : clearing
@@ -143,6 +128,14 @@ export async function deleteDesignatedPerson(req: Request, res: Response) {
     const { id } = req.params;
     const existing = await prisma.designatedPerson.findUnique({ where: { id } });
     if (!existing) throw new ApiException('Designated person not found', 404);
+
+    const assigned = await prisma.vesselDesignatedPerson.count({ where: { designatedPersonId: id } });
+    if (assigned > 0) {
+      throw new ApiException(
+        `${existing.name} is assigned to ${assigned} vessel${assigned === 1 ? '' : 's'}. Remove those assignments first.`,
+        409,
+      );
+    }
 
     await prisma.designatedPerson.delete({ where: { id } });
     removeUpload(existing.signatureUrl);
