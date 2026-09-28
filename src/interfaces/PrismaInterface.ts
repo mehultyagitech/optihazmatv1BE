@@ -75,7 +75,6 @@ export type ClientManagerSelect = Prisma.ClientManagerSelect;
 // Designated person interfaces
 export type DesignatedPersonWhere = Prisma.DesignatedPersonWhereInput;
 export type DesignatedPersonOrderBy = Prisma.DesignatedPersonOrderByWithRelationInput;
-export type DesignatedPersonInclude = Prisma.DesignatedPersonInclude;
 export type DesignatedPersonSelect = Prisma.DesignatedPersonSelect;
 
 // Generic types for backward compatibility
@@ -121,8 +120,7 @@ export type include =
   | UserInclude
   | PinInclude
   | LocationDiagramInclude
-  | ClientManagerInclude
-  | DesignatedPersonInclude;
+  | ClientManagerInclude;
 
 export type select = 
   | VesselSelect 
