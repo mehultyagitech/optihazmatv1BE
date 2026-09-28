@@ -519,3 +519,20 @@ model IHMCertificate {
 
   @@unique([vesselId, period])
 }
+
+// Designated Person: who is responsible for keeping the IHM up to date. The
+// IHM report lists them with their signature, so a DP has an effective period
+// and a new one is added rather than the previous one being edited.
+model DesignatedPerson {
+  id            String    @id @default(uuid())
+  name          String
+  position      String
+  initials      String
+  signatureUrl  String?
+  signatureName String?
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
