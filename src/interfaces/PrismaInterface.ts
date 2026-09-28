@@ -72,6 +72,12 @@ export type ClientManagerOrderBy = Prisma.ClientManagerOrderByWithRelationInput;
 export type ClientManagerInclude = Prisma.ClientManagerInclude;
 export type ClientManagerSelect = Prisma.ClientManagerSelect;
 
+// Designated person interfaces
+export type DesignatedPersonWhere = Prisma.DesignatedPersonWhereInput;
+export type DesignatedPersonOrderBy = Prisma.DesignatedPersonOrderByWithRelationInput;
+export type DesignatedPersonInclude = Prisma.DesignatedPersonInclude;
+export type DesignatedPersonSelect = Prisma.DesignatedPersonSelect;
+
 // Generic types for backward compatibility
 export type where = 
   | VesselWhere 
@@ -85,7 +91,8 @@ export type where =
   | UserWhere
   | PinWhere
   | LocationDiagramWhere
-  | ClientManagerWhere;
+  | ClientManagerWhere
+  | DesignatedPersonWhere;
 
 export type orderBy = 
   | VesselOrderBy 
@@ -99,7 +106,8 @@ export type orderBy =
   | UserOrderBy
   | PinOrderBy
   | LocationDiagramOrderBy
-  | ClientManagerOrderBy;
+  | ClientManagerOrderBy
+  | DesignatedPersonOrderBy;
 
 export type include = 
   | VesselInclude 
@@ -113,7 +121,8 @@ export type include =
   | UserInclude
   | PinInclude
   | LocationDiagramInclude
-  | ClientManagerInclude;
+  | ClientManagerInclude
+  | DesignatedPersonInclude;
 
 export type select = 
   | VesselSelect 
@@ -127,7 +136,8 @@ export type select =
   | UserSelect
   | PinSelect
   | LocationDiagramSelect
-  | ClientManagerSelect;
+  | ClientManagerSelect
+  | DesignatedPersonSelect;
 
 export type findManyArgs = {
   skip?: number;
